@@ -1,0 +1,7 @@
+.tmp/
+.env
+__pycache__/
+*.pyc
+*_must_read.md
+!projects/template_must_read.md
+
