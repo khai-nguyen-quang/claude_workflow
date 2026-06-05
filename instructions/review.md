@@ -14,6 +14,15 @@ Review code changes for correctness, safety, and production readiness. Produce s
 
 ---
 
+## Prerequisites (complete before any step)
+
+Derive `<project>` from the GitLab ref in your task context (the part before `#`).
+Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
+Apply every constraint in its `# Technical note` section throughout the entire review.
+**Do not proceed to any step below until this file is read.**
+
+---
+
 ## Review criteria
 
 All code is reviewed against:
@@ -92,9 +101,8 @@ Fix: <concrete corrected code snippet or exact change required>
 ### Step 1 — Fetch review content
 
 Use tools in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/` to:
-1. Switch to the MR's code branch (`checkout_mr_branch.sh` or equivalent)
-2. Fetch the MR description (`fetch_mr_content.sh`)
-3. Fetch the GitLab issue associated with the MR (`fetch_issue_from_mr.py`)
+1. Fetch the MR description (`fetch_mr_content.sh`)
+2. Fetch the GitLab issue associated with the MR (`fetch_issue_from_mr.py`)
 
 If a needed tool does not exist, implement it following `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`.
 
@@ -105,8 +113,6 @@ Store the following in `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<
 ---
 
 ### Step 2 — Load project context
-
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and apply all guidance from the `# Technical note` section throughout the review. If the file does not exist, skip this step.
 
 Scan `$WORKSPACE_ROOT/<project>/docs/` for documentation of modules touched by the MR. Read any relevant files.
 

@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # shellcheck source=claude_workflow/tools/gitlab/_env.sh
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
@@ -93,6 +93,14 @@ echo "MR !${iid}: ${mr_title}"
 echo "State:  ${mr_state}"
 echo "Branch: ${source_branch}  →  ${target_branch}"
 echo ""
+
+project_name="$(basename "${project_path}")"
+REPO_ROOT="${WORKSPACE_ROOT}/${project_name}"
+
+if [[ ! -d "${REPO_ROOT}/.git" ]]; then
+  echo "Error: local repo not found at '${REPO_ROOT}'." >&2
+  exit 1
+fi
 
 cd "${REPO_ROOT}"
 

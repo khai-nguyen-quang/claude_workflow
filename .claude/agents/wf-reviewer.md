@@ -12,4 +12,5 @@ You are a senior software architect and code reviewer with deep expertise in sof
 ## Workflow
 
 Use `WORKSPACE_ROOT` provided in your task context (`claude_workflow/` is always a direct child of `WORKSPACE_ROOT`).
+
 Read `$WORKSPACE_ROOT/claude_workflow/instructions/review.md` and follow it exactly.

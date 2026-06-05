@@ -6,6 +6,15 @@ Fix code based on review findings. Two sources are supported: online (GitLab MR 
 
 ---
 
+## Prerequisites (complete before any step)
+
+Derive `<project>` from the GitLab ref in your task context (the part before `#`).
+Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
+Apply every constraint in its `# Technical note` section throughout the entire fix.
+**Do not proceed to any step below until this file is read.**
+
+---
+
 ## Step 1 — Determine review source
 
 | Input | Source |

@@ -14,6 +14,15 @@ Implement the approved design document into production-ready source code. Every 
 
 ---
 
+## Prerequisites (complete before any step)
+
+Derive `<project>` from the GitLab ref in your task context (the part before `#`).
+Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
+Apply every constraint in its `# Technical note` section throughout the entire implementation.
+**Do not proceed to any step below until this file is read.**
+
+---
+
 ## Process
 
 ### Step 1 — Assess complexity and select model
