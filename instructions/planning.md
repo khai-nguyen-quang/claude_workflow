@@ -25,7 +25,7 @@ Apply every constraint in its `# Technical note` section throughout the entire p
 ## Process
 
 > **Mode**: Use Claude Plan Mode for planning steps.
-> **Model**: `claude-opus-4-7`
+> **Model**: `claude-opus-4-8`
 
 ### Step 1 — Fetch issue content
 

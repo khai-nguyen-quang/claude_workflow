@@ -31,7 +31,6 @@ Following is the **recommended** folder tree.
 
 ```
 workspace/
-├── CLAUDE.md
 ├── claude_workflow
 │   ├── .env                  ← credentials and instance config go here
 │   ├── CLAUDE.md
@@ -48,12 +47,6 @@ workspace/
 ├── projectX
 │   ├── CLAUDE.md
 ```
-> <span style="color:red">**IMPORTANT NOTE**</span>
->
-> <span style="color:red">Content of `workspace/CLAUDE.md`:</span>
-> ```
-> @claude_workflow/workflow.md
-> ```
 >
 > <span style="color:red">Content of `claude_workflow/.env` (see `.env_template` for reference):</span>
 > ```
@@ -63,6 +56,12 @@ workspace/
 > GL_NAMESPACE=mygroup/mysubgroup
 > ```
 > `claude_workflow/.env` is git-ignored and never committed.
+
+> <span style="color:red">**Setup with one-off command**</span>
+> ```
+> cd ~/workspace/claude_workflow
+> ./setup.sh
+> ```
 
 ##  Project-specific context
 

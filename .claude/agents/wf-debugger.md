@@ -3,7 +3,7 @@ name: wf-debugger
 description: >
   Bug investigation agent for the project workflow. Analyzes reported bugs,
   searches source code, and produces a root cause analysis with fix suggestions.
-model: claude-opus-4-7
+model: claude-opus-4-8
 tools: Read, Write, Bash, Glob, Grep
 ---
 

@@ -33,21 +33,21 @@ Before writing any code, classify the task using the design document:
 |------------|----------|-------|
 | **Simple** | Add a field, rename, small helper function, boilerplate | `claude-haiku-4-5-20251001` |
 | **Moderate** | Implement a feature, refactor a module, add a class | `claude-sonnet-4-6` |
-| **Complex** | New subsystem, concurrency, ML pipeline, cross-module architecture, performance-critical code | `claude-opus-4-7` |
+| **Complex** | New subsystem, concurrency, ML pipeline, cross-module architecture, performance-critical code | `claude-opus-4-8` |
 
 State the chosen complexity tier and the reason. If the task spans tiers, use the higher tier.
 
 ---
 
-### Step 2 — Load project context
+### Step 2 — Extract from project context
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`. Extract and store:
+From the `must_read.md` already read in Prerequisites, extract and store:
 - `<compile_cmd>` from `## Compilation`
-- Unit test framework, file naming pattern, and registration steps from `# Technical note` → `## Unit test framework (if any)`
-- Integration test framework, file naming pattern, and required environment from `# Technical note` → `## Integration test framework (if any)`
-- Project-specific constraints and invariants from `# Technical note` → `## Others`
+- Unit test framework, file naming pattern, and registration steps from `## Unit test framework (if any)`
+- Integration test framework, file naming pattern, and required environment from `## Integration test framework (if any)`
+- Project-specific constraints from `## Others`
 
-Apply all guidance from `# Technical note` throughout the implementation. If the file does not exist, fall back to `$WORKSPACE_ROOT/<project>/CLAUDE.md` or `README.md`.
+If the file did not exist, fall back to `$WORKSPACE_ROOT/<project>/CLAUDE.md` or `README.md`.
 
 ---
 

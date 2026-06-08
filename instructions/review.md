@@ -10,7 +10,7 @@ Review code changes for correctness, safety, and production readiness. Produce s
 - `WORKSPACE_ROOT` — absolute path to the workspace root
 - `<state_context>` — content of `_state.md` if resuming (may be absent)
 
-> **Model**: always `claude-opus-4-7` — production readiness review requires deep analysis.
+> **Model**: always `claude-opus-4-8` — production readiness review requires deep analysis.
 
 ---
 
@@ -33,42 +33,54 @@ All code is reviewed against:
 
 ---
 
-## Structured review passes (mandatory — do all four passes on every file)
+## Structured review passes (mandatory — do all five passes on every file)
 
-To ensure consistent coverage regardless of code size or complexity, review each file in exactly **four sequential passes**. Do not merge passes or skip one because the file "looks clean".
+To ensure consistent coverage regardless of code size or complexity, review each file in exactly **five sequential passes**. Do not merge passes or skip one because the file "looks clean".
 
-### Pass 1 — Correctness
+### Pass 1 — Architecture
+- **Responsibility boundaries**: does each class/module do one thing? Flag classes that mix concerns (e.g. parsing + I/O + business logic in one unit)
+- **Coupling**: flag direct dependencies on concrete types where an abstraction (interface, callback, template) would decouple; flag two-way dependencies between modules
+- **Dependency direction**: dependencies must flow toward stable, lower-level modules — flag any low-level module importing from a higher-level one
+- **Interface leakage**: internal implementation details (private types, mutable internals, platform specifics) must not appear in public headers or API surfaces
+- **Layering violations**: flag calls that skip layers (e.g. a UI component calling a database directly, bypassing a service layer)
+- **Abstraction altitude**: a function should operate at one level of abstraction — flag functions that mix high-level orchestration with low-level bit manipulation
+- **Ownership and lifetime**: data ownership must be explicit and unambiguous; flag shared ownership where unique ownership is possible, and unclear lifetime contracts across module boundaries
+- **Cohesion**: flag modules whose public surface has unrelated responsibilities that would be better split
+- **Extensibility**: flag designs that require modifying existing classes/functions to add new behaviour where the Open/Closed principle applies
+
+### Pass 2 — Correctness
 - Logic errors, wrong branching conditions, missing cases in switch/if chains
 - Off-by-one errors, incorrect loop bounds
 - Contract violations: preconditions not checked, postconditions not guaranteed
 - Return value ignored where it carries error state (`[[nodiscard]]` violations)
 - Integer overflow / underflow in arithmetic
 
-### Pass 2 — Safety
+### Pass 3 — Safety
 - **Memory**: raw `new`/`delete`, buffer overflows, use-after-free, dangling references
 - **Null / bounds**: pointer dereferences without null checks, unchecked array indexing
 - **Concurrency**: shared mutable state accessed without locks, mutex acquisition order, TOCTOU
 - **Resource leaks**: file descriptors, sockets, handles not closed on all exit paths
 
-### Pass 3 — Performance
+### Pass 4 — Performance
 - Unnecessary copies of large objects (pass by value where reference suffices)
 - Allocations inside hot loops (prefer stack or pre-allocated buffers)
 - O(n²) or worse algorithms in paths that scale with input
 - Repeated expensive calls whose results could be cached
 
-### Pass 4 — Language idioms and style
+### Pass 5 — Language idioms and style
 - **C++**: RAII wrappers over raw resource management; `std::optional` / `std::expected` over sentinel values; prefer range-based for; use `std::span` over pointer+size pairs
 - **Python**: type annotations on public functions; f-strings over `.format()`; context managers for resources; no bare `except:`
 - **Shell**: quote all variable expansions; `set -euo pipefail`; no `[ ]` where `[[ ]]` works
 
+
 ### Coverage table (required after each file)
 
-After completing all four passes on a file, append a one-line coverage table to the review document:
+After completing all five passes on a file, append a one-line coverage table to the review document:
 
 ```
-| File | Pass 1 Correctness | Pass 2 Safety | Pass 3 Performance | Pass 4 Idioms |
-|------|--------------------|---------------|--------------------|---------------|
-| path/to/file.cc | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings |
+| File | Pass 1 Architecture | Pass 2 Correctness | Pass 3 Safety | Pass 4 Performance | Pass 5 Idioms |
+|------|--------------------|---------------|--------------------|---------------|---------------------|
+| path/to/file.cc | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings |
 ```
 
 Write `✓ clean` when a pass produced no findings. **Never leave a cell blank** — a blank means the pass was skipped, not that it was clean.
@@ -77,13 +89,33 @@ Write `✓ clean` when a pass produced no findings. **Never leave a cell blank**
 
 ## Finding format
 
-Each finding **must** follow this format:
+Present findings in two parts: a **summary table** for at-a-glance overview, followed by **numbered fix blocks** with concrete code.
 
+### Summary table
+
+| # | Severity | File | Line | Issue | Rule |
+|---|----------|------|------|-------|------|
+| 1 | Critical | foo.cc | 42 | Null pointer dereferenced before null check | C.149 |
+| 2 | Major | bar.py | 17 | Socket fd leaked on error path | resource-leak |
+| 3 | Medium | baz.sh | 8 | Unquoted variable expansion | SC2086 |
+
+Sort rows: Critical first, then Major, Medium, Minor.
+
+### Fix blocks
+
+Immediately after the table, one block per finding, keyed by number:
+
+**Fix #1** — `foo.cc:42`
+```cpp
+// corrected code snippet
 ```
-<severity> — <file>:<line> — <what is wrong and which rule it violates>
----
-Fix: <concrete corrected code snippet or exact change required>
+
+**Fix #2** — `bar.py:17`
+```python
+# corrected code snippet
 ```
+
+Every fix block is mandatory. A finding with no fix block is incomplete.
 
 ### Severity levels
 
@@ -130,19 +162,13 @@ For each changed file, detect the language and load the matching skill:
 
 ### Step 4 — Review the diff
 
-For each changed file, run all four passes from the **Structured review passes** section above in order: Correctness → Safety → Performance → Idioms. Do not skip any pass.
-
-- Review only the **changed lines** in context (do not flag pre-existing issues in untouched lines)
-- Flag each violation with the relevant rule code (e.g. `R.11`, `CP.20` for C++; `UP006`, `TRY003` for Python; `SC2086` for shell)
-- After finishing all four passes on a file, append its coverage table row to the review document
-
-Write all findings and the coverage table into the `## Review` section of `<project>-mr-<id>_review.md`.
+For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Review only changed lines; flag each violation with its rule code; append the coverage table row after each file. Write findings into `## Review` of `<project>-mr-<id>_review.md`.
 
 ---
 
 ### Step 5 — Production Readiness Verdict
 
-List all findings ordered by severity (Critical → Major → Medium → Minor). Omit any heading with no findings. End with a summary table of all changed files and one of:
+Reprint the consolidated findings table (all files, sorted Critical → Major → Medium → Minor) followed by all fix blocks. Then close with a summary table of all changed files and one of:
 - **PRODUCTION READY** — all criteria pass, safe to merge.
 - **NEEDS WORK** — list the critical/major issues that must be fixed before merge.
 - **NOT PRODUCTION READY** — fundamental problems; recommend rewrite of affected sections.
@@ -178,9 +204,7 @@ If ambiguous, ask before proceeding.
 
 ### Step 2 — Review the changes
 
-For each changed file, run all four passes from the **Structured review passes** section above in order: Correctness → Safety → Performance → Idioms. Do not skip any pass.
-
-For each violation, flag the rule code and provide a concrete fix using the finding format above. Append the coverage table row for each file after completing its four passes.
+For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Flag each violation with its rule code and a concrete fix. Append the coverage table row after each file.
 
 ---
 

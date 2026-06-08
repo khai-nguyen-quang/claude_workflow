@@ -4,7 +4,7 @@ description: >
   Planning agent for project workflow. Given a GitLab issue,
   produces a strategy and design document covering architecture, component design,
   build integration, and test strategy.
-model: claude-opus-4-7
+model: claude-opus-4-8
 tools: Read, Write, Bash, Glob, Grep
 ---
 

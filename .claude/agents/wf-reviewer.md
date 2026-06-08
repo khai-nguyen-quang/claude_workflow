@@ -3,7 +3,7 @@ name: wf-reviewer
 description: >
   Code review agent for project workflow. Reviews C++, Python,
   and shell code — or a GitLab MR — for correctness, safety, and production readiness.
-model: claude-opus-4-7
+model: claude-opus-4-8
 tools: Read, Write, Bash, Glob, Grep
 ---
 
