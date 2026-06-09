@@ -1,6 +1,6 @@
 
 ## Workflow
-Working on a Gitlab Issue includes sequential phases: Planning, Planning review, Coding, Write tests, Code quality assurance, Coding review
+Working on a Gitlab Issue includes sequential phases: Planning, Planning review, Coding, Write tests, Code quality assurance, Coding review, Create merge request
 
 Working on a Gitlab Merge request includes a single phase: Coding Review
 
@@ -74,6 +74,7 @@ If the user provides a project/issue in their message, use that instead of scann
 | Source code changes in git | Phase 4 — write tests |
 | Tests written | Phase 5 — lint/QA |
 | `_review.md` | Phase 6 — review done |
+| `_mr.md` | Phase 8 — merge request created |
 
 ---
 
@@ -125,6 +126,19 @@ If the user provides a project/issue in their message, use that instead of scann
 - **Input**: the code changes made at phase 3
 - **Output**: Review document stored using the correct prefix per **Artifact paths**. Examples: `$WORKSPACE_ROOT/claude_workflow/.tmp/projectX-309/projectX-309_review.md` (Issue), `$WORKSPACE_ROOT/claude_workflow/.tmp/projectX-mr-177/projectX-mr-177_review.md` (MR)
 - **State update**: Write `_state.md` with review outcome.
+
+### Phase 8: Create Merge Request
+- This phase can be invoked individually with `/wf create_mr <project>#<number>`. Example: `/wf create_mr projectX#309`
+- Inform user that you are entering "Create Merge Request phase"
+- `<ref>` must be a Gitlab **Issue**, not an MR. The phase turns a completed issue into a draft merge request.
+- Use `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/create_mr.md` as the main instruction.
+- MR title and description follow the template at `$WORKSPACE_ROOT/claude_workflow/template/gitlab_mr.md` (draft flag and labels come from its "Others" section).
+- The composed body is filled from the design document and `git diff`; testing-checklist boxes are left as the template provides them (no invented test evidence).
+- **Confirmation required**: creating an MR is outward-facing — show the title, target branch, draft flag, and labels, and ask before creating.
+- **Input**: the code changes from Coding (committed and pushed on the working branch).
+- **Output**: created draft MR; composed body stored at `<prefix>mr.md`.
+- **Tool**: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/create_merge_request.py`.
+- **State update**: Write `_state.md` with the created MR iid/URL.
 
 ### Debug (utility)
 - Invoke with `/wf debug <ref>` where `<ref>` is either a GitLab issue (`projectX#123`) or a free-form bug slug (`fcw_not_alert`).

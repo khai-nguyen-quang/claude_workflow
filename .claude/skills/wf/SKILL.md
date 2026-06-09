@@ -3,8 +3,8 @@ name: wf
 description: >
   Run a single Claude workflow phase for a GitLab issue or MR.
   Usage: /wf <phase> <ref>
-  Phases: planning, plan-review, coding, test, lint, review, fix_review, collect, debug
-  Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf fix_review projectX#MR!186  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
+  Phases: planning, plan-review, coding, test, lint, review, fix_review, create_mr, collect, debug
+  Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf create_mr projectX#309  |  /wf fix_review projectX#MR!186  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
 ---
 
 ## Parse args
@@ -24,6 +24,7 @@ Phases:
   lint          Phase 5 — fix lint / code quality violations
   review        Phase 6 — review code or a GitLab MR        [wf-reviewer agent]
   fix_review    Phase 7 — fix review comments               [wf-coder agent]
+  create_mr     Phase 8 — create the MR for a completed issue
   collect       Utility — collect project context into a must-read file
   debug         Utility — investigate a bug, produce root cause analysis [wf-debugger agent]
 
@@ -35,9 +36,24 @@ Ref formats:
   fcw_not_alert       Free-form bug slug (describe bug in the prompt message)
 ```
 
+If the first token is `start` or `stop`, handle **Sticky mode** below and stop.
+
 If the first token is **not** a recognized phase, go to **Fallback**.
 
 For the `collect` phase, `<ref>` is a bare project name (no `#`); `<project>` = `<ref>`.
+
+## Sticky mode (`start` / `stop`)
+
+A flag file `$WORKSPACE_ROOT/claude_workflow/.tmp/.wf_mode_active` toggles sticky mode.
+While it exists, a `UserPromptSubmit` hook (`tools/wf_mode_hook.sh`) re-injects, on every
+turn, an instruction to route the user's bare message through this skill — so the user can
+drop the `/wf` prefix and just type `planning projectX#309`, `review projectX#MR!177`, etc.
+
+- `/wf start` — create the flag file (`mkdir -p` the `.tmp/` dir, then `touch` it) and reply:
+  "Sticky `/wf` mode **on**. Bare messages now run as workflow commands (e.g. `planning projectX#309`). Slash commands still work normally; type `/wf stop` to exit."
+- `/wf stop` — delete the flag file and reply: "Sticky `/wf` mode **off**."
+
+When the hook routes a bare message here, parse and dispatch it exactly as a normal `/wf` invocation.
 
 ## Prepare context (always, before any phase)
 
@@ -68,6 +84,7 @@ For each phase, read the corresponding file and follow it exactly:
 | `lint` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/lint.md` |
 | `review` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/review.md` |
 | `fix_review` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/fix_review.md` |
+| `create_mr` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/create_mr.md` |
 | `collect` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/collect.md` |
 | `debug` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/debug.md` |
 | *(unrecognized)* | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/fallback.md` |

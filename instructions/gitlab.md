@@ -53,13 +53,58 @@ Placed at  `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch`
 ### Working with commit
 - Script (*.sh, *.py) to commit code to current branch: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/commit_code.sh`
 
-### Working with merge request
+### Working with an existing merge request
 Script (*.sh, *.py) to switch to remote branch of merge request
 Script (*.sh, *.py) to fetch an particular MR, placed at: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/fetch_mr_content.sh`
 Script (*.sh, *.py) to retrive information of Gitlab Issue associated with that merge request. 
 - Example: The merge request projectX#MR!178 has title: "[Refactor] Extract DrainQueue from WorkerResultChannel to common. Ref #310", then it is associated with Gitlab Issue projectX#310
 Script (*.sh, *.py) to allow upload review comments to that MR, placed at: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/upload_review_comment`
 Script (*.sh, *.py) to retrieve all review comments available on a merge request, store those comments in to file.
- 
+
+### Merge request creation
+Script to create a new merge request, placed at: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/create_merge_request.py`
+
+```
+create_merge_request.py <project> [options]
+```
+- `<project>`: short name (`projectX`, expanded via `GL_NAMESPACE`) or full path (`group/sub/projectX`).
+- `--source <branch>`: source branch. Defaults to the current branch of the local repo at `$WORKSPACE_ROOT/<project>`.
+- `--target <branch>`: target branch. Defaults to the project's default branch.
+- `--title <title>`: MR title. Defaults to the linked issue title, else the latest commit subject.
+- `--description <text>` / `--description-file <path>`: MR body. If omitted, the template below is used.
+- `--issue <iid>`: append `Closes #<iid>` and derive the default title from the issue.
+- `--draft`, `--remove-source-branch`, `--squash`, `--dry-run`.
+
+The source branch must already be pushed to the remote (use `branch/push_branch.sh` first); the script pre-flight checks this and aborts with guidance if the branch is missing.
+
+Default description template (used when no `--description`/`--description-file` is given):
+
+```
+# Summary
+
+---
+
+# Implementation Details
+
+## Important note
+
+## Core changes:
+
+
+## Simulation support:
+
+
+## Document
+
+## Known bug:
+
+---
+
+# How It Was Tested
+- Manual validation with recorded video sequences
+- Automated validation
+    - CI pipeline passed successfully
+```
+
 # Error handling
 In case Agent got error while using scripts in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/`, it will clarify with user, do not to use alternatives.

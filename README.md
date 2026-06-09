@@ -39,7 +39,7 @@ workspace/
 │   ├── README.md
 │   ├── skills
 │   ├── tools
-│   └── workflow.md
+│   └── template/workflow.md
 ├── projectA
 │   ├── CLAUDE.md
 ├── projectB
