@@ -22,6 +22,9 @@ Spawn an Agent with:
   ## Project context
   <project_context>
 
+  ## Technical note
+  <technical_note>
+
   <if ref contains MR!>
   ## MR context
   ### Summary

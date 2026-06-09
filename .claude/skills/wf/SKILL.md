@@ -71,6 +71,11 @@ Read `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.m
 Read `$WORKSPACE_ROOT/<project>/CLAUDE.md` → `<project_context>`.
 If missing, warn: "No CLAUDE.md found for `<project>`. Create it with build commands, architecture, and conventions."
 
+**Step 4 — load the Technical note** (skip for `collect`)
+Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and extract its `# Technical note` section → `<technical_note>`.
+If the file is missing, set `<technical_note>` = `(not available)` and warn: "No `<project>_must_read.md` found. Run `/wf collect <project>` first for richer context."
+Phases that spawn an agent must inject `<technical_note>` into the agent prompt.
+
 ## Phase dispatch
 
 For each phase, read the corresponding file and follow it exactly:

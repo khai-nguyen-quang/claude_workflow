@@ -8,6 +8,9 @@ Spawn an Agent with:
   ## Project context
   <project_context>
 
+  ## Technical note
+  <technical_note>
+
   ## Task
   GitLab ref: <ref>
   WORKSPACE_ROOT: $WORKSPACE_ROOT
