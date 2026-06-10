@@ -67,14 +67,18 @@ When the hook routes a bare message here, parse and dispatch it exactly as a nor
 **Step 2 — load state file** (skip for `collect`)
 Read `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md` if it exists → `<state_context>`.
 
-**Step 3 — load project context** (skip for `collect`)
-Read `$WORKSPACE_ROOT/<project>/CLAUDE.md` → `<project_context>`.
-If missing, warn: "No CLAUDE.md found for `<project>`. Create it with build commands, architecture, and conventions."
+**Step 3 — forward the phase's Technical note subsection** (skip for `collect`)
+Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`. From its `# Technical note` section, extract the subsection for this phase — match by heading **text** at any level (`##` or `###`), capturing from that heading through to the next heading of equal-or-higher level — into `<technical_note>`:
 
-**Step 4 — load the Technical note** (skip for `collect`)
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and extract its `# Technical note` section → `<technical_note>`.
-If the file is missing, set `<technical_note>` = `(not available)` and warn: "No `<project>_must_read.md` found. Run `/wf collect <project>` first for richer context."
-Phases that spawn an agent must inject `<technical_note>` into the agent prompt.
+| Phase | Subsection forwarded |
+|-------|----------------------|
+| `planning`, `plan-review`, `review` | `Features` |
+| `coding`, `test`, `lint`, `fix_review` | `Coding and Testing` |
+| `debug` | the entire `# Technical note` |
+
+If the file or the subsection is missing, set `<technical_note>` = `(not available)` and warn: "No `<project>` must_read / matching subsection found. Run `/wf collect <project>` first."
+
+Agent phases inject `<technical_note>` into the agent prompt (see each phase file). The inline phases (`plan-review`, `test`, `lint`) run in the main session, which now holds `<technical_note>` — apply it. `CLAUDE.md` (project architecture) is still read by each agent via its **Required reading**; the skill forwards only the targeted Technical note subsection.
 
 ## Phase dispatch
 
@@ -93,6 +97,19 @@ For each phase, read the corresponding file and follow it exactly:
 | `collect` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/collect.md` |
 | `debug` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/debug.md` |
 | *(unrecognized)* | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/fallback.md` |
+
+## Guardrails (all phases)
+
+**Never push code without explicit confirmation.** Before any `git push` /
+`push_branch.sh`, stop and show the user the branch, the remote, and the commits to be
+pushed, then ask "Push this branch?" and wait for an explicit yes. This applies even when
+a phase (e.g. `create_mr`) needs the branch pushed to proceed — confirm first, never push
+silently.
+
+**Commit messages carry no Claude/Anthropic attribution.** When creating a commit, never
+add a `Co-Authored-By:` trailer (e.g. `Co-Authored-By: Claude Opus 4.8
+<noreply@anthropic.com>`) or any similar attribution line. The message is the change
+description only.
 
 ## After each phase
 

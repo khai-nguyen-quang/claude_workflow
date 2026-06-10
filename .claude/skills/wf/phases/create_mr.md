@@ -18,7 +18,12 @@ Use the issue title and description to fill the template.
 **Step 3 — determine the source branch**
 Run inside `$WORKSPACE_ROOT/<project>`: `git rev-parse --abbrev-ref HEAD`.
 If the branch is the default branch (e.g. `main`/`master`), stop and ask the user which
-branch to use. Ensure it is pushed:
+branch to use.
+
+**Confirm before pushing** (pushing code is outward-facing). Show the user the branch
+name, the remote it will push to, and the commits ahead of the remote
+(`git log --oneline @{u}..HEAD`, or `git log --oneline <target>..HEAD` if no upstream).
+Ask: "Push this branch?" Wait for explicit confirmation before running:
 ```bash
 bash $WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch/push_branch.sh
 ```

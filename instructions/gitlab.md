@@ -52,6 +52,9 @@ Placed at  `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch`
 
 ### Working with commit
 - Script (*.sh, *.py) to commit code to current branch: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/commit_code.sh`
+- **Commit message**: do **not** add any `Co-Authored-By:` trailer (e.g.
+  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`) or any other Claude/Anthropic
+  attribution line. Keep the message to the change description only.
 
 ### Working with an existing merge request
 Script (*.sh, *.py) to switch to remote branch of merge request

@@ -19,11 +19,14 @@ Spawn an Agent with:
 - **description**: `Review phase for <ref>`
 - **prompt**:
   ```
-  ## Project context
-  <project_context>
-
-  ## Technical note
+  ## Technical note — Features
   <technical_note>
+
+  ## Task
+  GitLab ref: <ref>
+  WORKSPACE_ROOT: $WORKSPACE_ROOT
+
+  Review the code against the Features constraints above. Then follow instructions/review.md.
 
   <if ref contains MR!>
   ## MR context
@@ -34,12 +37,11 @@ Spawn an Agent with:
   <mr_implementation>
   </if>
 
-  ## Task
-  GitLab ref: <ref>
-  WORKSPACE_ROOT: $WORKSPACE_ROOT
-
   <if state_context exists>
   ## Current state
   <state_context>
   </if>
   ```
+
+`<technical_note>` is the `Features` subsection forwarded by Step 3. The agent also reads `CLAUDE.md` via its Required reading.
+`<mr_summary>` / `<mr_implementation>` stay injected — dynamic MR data the parent fetches with GitLab tools.

@@ -5,22 +5,20 @@ Spawn an Agent with:
 - **description**: `Planning phase for <ref>`
 - **prompt**:
   ```
-  ## Project context
-  <project_context>
-
-  ## Technical note
+  ## Technical note — Features
   <technical_note>
 
   ## Task
   GitLab ref: <ref>
   WORKSPACE_ROOT: $WORKSPACE_ROOT
 
-  After fetching the issue, identify the modules it touches and read the relevant
-  docs under `$WORKSPACE_ROOT/<project>/docs/`, `<project>/README.md`, and any
-  `<module>/README.md` before drafting the design (per instructions/planning.md Step 2).
+  Honor the Features constraints above throughout planning. Then follow
+  instructions/planning.md; module docs are discovered there (Step 2) from the issue.
 
   <if state_context exists>
   ## Current state
   <state_context>
   </if>
   ```
+
+`<technical_note>` is the `Features` subsection forwarded by Step 3. The agent also reads `CLAUDE.md` via its Required reading.

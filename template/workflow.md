@@ -82,6 +82,7 @@ If the user provides a project/issue in their message, use that instead of scann
 - This phase can be invoked individually with prompt format "Planning <project>#<number>". Example: "Planning projectX#309"
 - Inform user that you are entering "Planning phase"
 - Planning phase includes making strategy and design document
+- The design document embeds Mermaid diagrams (block / architectural / sequence) following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`.
 - **How**: Uses `$WORKSPACE_ROOT/claude_workflow/instructions/planning.md` as the main instruction going through all steps of planning phase.
 - **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_strategy.md` and `_design.md` to determine which step to resume.
 - **Input**: Gitlab Issue number or Gitlab Merge Request

@@ -33,6 +33,41 @@ All code is reviewed against:
 
 ---
 
+## Evidence and verification discipline (read before flagging anything)
+
+A false positive costs the author time, erodes trust in the review, and can mask the real
+findings. Every finding you assert is a claim you have verified — not a suspicion. Before a
+finding enters the table:
+
+1. **Trace the full control flow, not just the changed lines.** A defect in a changed block
+   is only a defect if nothing in the surrounding or *calling* code already handles it. Before
+   claiming a resource leak, missing cleanup, unhandled signal/interrupt, or "ignored error",
+   open the caller and confirm there is no enclosing `finally` / `try-except` / RAII destructor
+   / context manager / `defer` / scope guard that already covers the path. Read the function
+   that calls the changed code, and the one that calls *that*, until you reach a level where the
+   guarantee is or is not provided. Quote the file:line of the handler you checked (whether it
+   exists or not) in the finding.
+
+2. **Verify claimed fixes against the diff.** When the MR description or the linked issue says
+   a bug was fixed (e.g. "fixed #319"), confirm the corresponding change is actually present in
+   `git diff origin/master...HEAD`. A claimed fix that does not appear in the diff — or whose
+   changed region is byte-identical to master — is itself a Major finding (traceability), even
+   if the rest of the code is clean.
+
+3. **Calibrate confidence, never bluff.** If you cannot conclusively confirm a finding from the
+   code in front of you, do one of: (a) verify it by reading more context or running a quick
+   check, or (b) lower its severity and label it explicitly as **"unconfirmed — needs author
+   confirmation"** with the exact question to resolve it. Never state a tentative concern in the
+   assertive voice of a confirmed defect.
+
+4. **Distinguish defect from intentional design.** Interactive waits, busy-polls behind an
+   explicit interactive flag, debug-only branches, and deliberate sentinel values are not
+   automatically defects. Check the entry condition (what flag/mode gates the code) and the
+   intended UX before flagging. If the behaviour is intended and safe under its guard, do not
+   flag it — or flag only the genuine residual nit (e.g. poll interval) at Minor.
+
+---
+
 ## Structured review passes (mandatory — do all five passes on every file)
 
 To ensure consistent coverage regardless of code size or complexity, review each file in exactly **five sequential passes**. Do not merge passes or skip one because the file "looks clean".
@@ -60,6 +95,11 @@ To ensure consistent coverage regardless of code size or complexity, review each
 - **Null / bounds**: pointer dereferences without null checks, unchecked array indexing
 - **Concurrency**: shared mutable state accessed without locks, mutex acquisition order, TOCTOU
 - **Resource leaks**: file descriptors, sockets, handles not closed on all exit paths
+- **Cleanup / interrupt paths**: before flagging a leak, a missing cleanup, or an unhandled
+  `KeyboardInterrupt`/signal, apply discipline rule #1 — trace the caller for an enclosing
+  `finally`/RAII/context-manager guarantee. The exit path of an exception or Ctrl+C is whatever
+  runs in the nearest enclosing `finally`, not necessarily code on the changed line. Only flag
+  if no such guarantee exists; cite the file:line you checked.
 
 ### Pass 4 — Performance
 - Unnecessary copies of large objects (pass by value where reference suffices)
@@ -162,7 +202,9 @@ For each changed file, detect the language and load the matching skill:
 
 ### Step 4 — Review the diff
 
-For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Review only changed lines; flag each violation with its rule code; append the coverage table row after each file. Write findings into `## Review` of `<project>-mr-<id>_review.md`.
+For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Findings must be about changed lines, but **read enough surrounding and caller context to judge each change correctly** — a changed block is reviewed in the context of the unchanged code that calls it and that it calls (see Evidence and verification discipline #1). Flag each violation with its rule code; append the coverage table row after each file. Write findings into `## Review` of `<project>-mr-<id>_review.md`.
+
+**Traceability cross-check**: for every fix the MR description or linked issue claims (e.g. "fixed #319"), confirm the change is present in `git diff origin/master...HEAD` (discipline rule #2). Record any claimed-but-absent fix as a Major finding.
 
 ---
 

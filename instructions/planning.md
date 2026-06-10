@@ -15,10 +15,10 @@ Produce a strategy document and a detailed design document for a GitLab issue. T
 
 ## Prerequisites (complete before any step)
 
-Derive `<project>` from the GitLab ref in your task context (the part before `#`).
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
-Apply every constraint in its `# Technical note` section throughout the entire planning.
-**Do not proceed to any step below until this file is read.**
+You have already completed the **Required reading** in your agent definition (`CLAUDE.md`
++ the must_read `# Technical note`) and emitted the "Context loaded" gate. Apply every
+constraint from `# Technical note` throughout the entire planning. If you have not done
+that reading yet, do it now before continuing.
 
 ---
 
@@ -101,6 +101,11 @@ Write `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design
 
 **Components and modules**
 - List every component or module to implement, with its responsibility in one sentence.
+
+**Diagrams**
+- Draw the design using Mermaid, following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`.
+- Include at minimum an architectural diagram and a sequence diagram for the main flow; add a block diagram when the component breakdown needs it.
+- Embed the diagrams inline in this design document as ```` ```mermaid ```` fenced blocks.
 
 **Communication flow**
 - Describe how components interact at a high level (IPC, function calls, shared state, message queues, etc.).
