@@ -48,11 +48,20 @@ finding enters the table:
    guarantee is or is not provided. Quote the file:line of the handler you checked (whether it
    exists or not) in the finding.
 
-2. **Verify claimed fixes against the diff.** When the MR description or the linked issue says
-   a bug was fixed (e.g. "fixed #319"), confirm the corresponding change is actually present in
-   `git diff origin/master...HEAD`. A claimed fix that does not appear in the diff — or whose
-   changed region is byte-identical to master — is itself a Major finding (traceability), even
-   if the rest of the code is clean.
+2. **Verify claimed fixes against the diff, then grade by what you find.** When the MR
+   description or the linked issue says a bug was fixed (e.g. "fixed #319"), confirm the
+   corresponding change is actually present in `git diff origin/master...HEAD`. Grade the result
+   by the *state of the code on master*, not merely by the claim's absence from the diff:
+   - **Fix genuinely missing → Major (traceability).** The diff does not contain the fix **and**
+     the buggy behaviour still exists on master (the changed region is byte-identical to the
+     still-broken master code, or the defect is otherwise reachable). A latent bug remains; the
+     claim is false. Block on it.
+   - **Fix pre-existing / claim mislabelled → Informational.** The behaviour is already correct
+     on master (the "fixed" code predates this MR and works), so the MR changelog is inaccurate
+     but no defect exists. Record it as Informational and recommend correcting the MR/issue text;
+     do **not** block merge.
+   - **When unsure which case applies**, verify by reading the master version of the code and the
+     linked issue's actual symptom before grading — do not default to Major.
 
 3. **Calibrate confidence, never bluff.** If you cannot conclusively confirm a finding from the
    code in front of you, do one of: (a) verify it by reading more context or running a quick
@@ -202,7 +211,9 @@ For each changed file, detect the language and load the matching skill:
 
 ### Step 4 — Review the diff
 
-For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Findings must be about changed lines, but **read enough surrounding and caller context to judge each change correctly** — a changed block is reviewed in the context of the unchanged code that calls it and that it calls (see Evidence and verification discipline #1). Flag each violation with its rule code; append the coverage table row after each file. Write findings into `## Review` of `<project>-mr-<id>_review.md`.
+For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Findings must be about changed lines, but **read enough surrounding and caller context to judge each change correctly** — a changed block is reviewed in the context of the unchanged code that calls it and that it calls (see Evidence and verification discipline #1). Flag each violation with its rule code; append the coverage table row after each file.
+
+**Writing the report file is mandatory and is not optional on any run.** Write findings into `## Review` of `<project>-mr-<id>_review.md`. If the file already exists from a prior run, **overwrite it** with the current run's results — never skip writing because a file is present, and never deliver findings only in the chat response. The chat summary is in addition to the file, not a substitute for it.
 
 **Traceability cross-check**: for every fix the MR description or linked issue claims (e.g. "fixed #319"), confirm the change is present in `git diff origin/master...HEAD` (discipline rule #2). Record any claimed-but-absent fix as a Major finding.
 
@@ -258,4 +269,4 @@ List all findings ordered by severity (Critical → Major → Medium → Minor),
 
 ## Output files
 
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md` — review document (MR workflow only)
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md` — review document (MR workflow only). **Always written**, on every run including re-reviews (overwrite a stale file from a prior run). A review that produces no report file is incomplete, regardless of what was delivered in chat.
