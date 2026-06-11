@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Create and checkout a new git branch for a GitLab ticket.
-# Branch name convention: feature/<slug>-<ticket-id>
+# Branch name convention: feature/<slug>-<ticket-id> or bug/<slug>-<ticket-id>
 #
 # Usage:
-#   create_branch.sh <ticket-ref> [--name <branch-name>] [--type <feature|fix|chore>]
+#   create_branch.sh <ticket-ref> [--name <branch-name>] [--type <feature|bug>]
 #
 # Examples:
 #   create_branch.sh projectX#309
 #   create_branch.sh projectX#309 --name metadrive-simulation
-#   create_branch.sh projectX#309 --type fix
+#   create_branch.sh projectX#309 --type bug
 
 set -euo pipefail
 
@@ -31,13 +31,14 @@ Arguments:
 Options:
   --name <slug>      Custom slug for the branch name (spaces → hyphens).
                      If omitted, the ticket title is fetched and slugified.
-  --type <type>      Branch prefix: feature, fix, or chore. Default: feature.
+  --type <type>      Branch prefix: feature or bug. Default: feature.
   --no-checkout      Create the branch without switching to it.
   --help, -h         Show this help.
 
 Examples:
   create_branch.sh projectX#309
   create_branch.sh projectX#309 --name metadrive-sim --type feature
+  create_branch.sh projectX#309 --type bug
   create_branch.sh projectX#309 --no-checkout
 EOF
 }
@@ -68,8 +69,8 @@ if [[ -z "${ticket_ref}" ]]; then
 fi
 
 case "${branch_type}" in
-  feature|fix|chore) ;;
-  *) echo "Error: --type must be feature, fix, or chore (got '${branch_type}')" >&2; exit 1 ;;
+  feature|bug) ;;
+  *) echo "Error: --type must be feature or bug (got '${branch_type}')" >&2; exit 1 ;;
 esac
 
 # Resolve the ref to get project + iid
