@@ -12,7 +12,10 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+# shellcheck source=claude_workflow/tools/gitlab/_repo.sh
+source "${SCRIPT_DIR}/../_repo.sh"
 
 _show_help() {
   cat << 'EOF'
@@ -24,6 +27,8 @@ if this is the first push.
 Options:
   --branch <name>  Branch to push. Defaults to the current branch.
   --remote <name>  Remote to push to. Defaults to "origin".
+  --repo <path>    Repository to operate on. Defaults to $WF_REPO, else the repo
+                   of the current directory, else the sole repo under the workspace.
   --force          Force-push (use with caution).
   --dry-run        Show what would be pushed without actually pushing.
   --help, -h       Show this help.
@@ -31,12 +36,14 @@ Options:
 Examples:
   push_branch.sh
   push_branch.sh --branch feature/my-feature-309
+  push_branch.sh --repo "${WORKSPACE_ROOT}/openpilot"
   push_branch.sh --remote origin --force
 EOF
 }
 
 branch=""
 remote="origin"
+repo_opt=""
 force=false
 dry_run=false
 
@@ -44,6 +51,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --branch)   branch="$2"; shift 2 ;;
     --remote)   remote="$2"; shift 2 ;;
+    --repo)     repo_opt="$2"; shift 2 ;;
     --force)    force=true; shift ;;
     --dry-run)  dry_run=true; shift ;;
     --help|-h)  _show_help; exit 0 ;;
@@ -51,6 +59,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+REPO_ROOT="$(resolve_repo_root "${WORKSPACE_ROOT}" "${repo_opt}")"
 cd "${REPO_ROOT}"
 
 # Resolve branch

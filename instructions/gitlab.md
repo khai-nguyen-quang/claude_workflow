@@ -49,6 +49,7 @@ Gitlab Epic
 Placed at  `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch`
 - Script (*.sh, *.py) to create a new branch to start working on a new ticket.
 - Script (*.sh, *.py) to push a new branch to remote.
+- **MUST follow**: **NEVER** push code to remote without confirmation from user.
 - **Branch name convention**: `feature/<slug>-<id>` for features, `bug/<slug>-<id>` for
   bug fixes (`<id>` is the GitLab ticket number). `create_branch.sh` enforces this via
   `--type feature|bug` (default `feature`).

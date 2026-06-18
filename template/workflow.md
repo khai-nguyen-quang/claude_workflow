@@ -81,13 +81,14 @@ If the user provides a project/issue in their message, use that instead of scann
 ### Phase 1: Planning
 - This phase can be invoked individually with prompt format "Planning <project>#<number>". Example: "Planning projectX#309"
 - Inform user that you are entering "Planning phase"
+- Planning starts with a **brainstorming step**: it delegates to the `superpowers:brainstorming` skill to turn the ticket into an approved design spec (`*_brainstorm.md`), then hands that spec to the wf-planner. Brainstorming stops after the spec is approved — it does **not** run into `writing-plans`; the wf-planner does the planning.
 - Planning phase includes making strategy and design document
 - The design document embeds Mermaid diagrams (block / architectural / sequence) following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`.
 - **How**: Uses `$WORKSPACE_ROOT/claude_workflow/instructions/planning.md` as the main instruction going through all steps of planning phase.
 - **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_strategy.md` and `_design.md` to determine which step to resume.
 - **Input**: Gitlab Issue number or Gitlab Merge Request
-- **Output**: `*_strategy.md`, `*_design.md`
-- **State update**: Write `_state.md` after strategy is approved; update it after design is approved.
+- **Output**: `*_brainstorm.md`, `*_strategy.md`, `*_design.md`
+- **State update**: Write `_state.md` after the brainstorm spec is approved; update it after strategy is approved, and again after design is approved.
 
 ### Phase 2: Planning review
 - This phase can be invoked individually with prompt format "Planning review <project>#<number>". Example: "Planning review projectX#309"

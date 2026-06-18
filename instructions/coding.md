@@ -25,6 +25,34 @@ Apply every constraint in its `# Technical note` section throughout the entire i
 
 ## Process
 
+### Step 0 — Set up the working branch (do this first, before editing any file)
+
+Never implement on the default branch or on an unrelated ticket's branch. Confirm the repo
+is on this ticket's dedicated branch **before** touching any source file:
+
+```bash
+cd "$WORKSPACE_ROOT/<project>"
+current="$(git rev-parse --abbrev-ref HEAD)"
+```
+
+- If `current` already ends in `-<id>` (e.g. `feature/<slug>-<id>` / `bug/<slug>-<id>`),
+  you are on the correct branch — continue to Step 1.
+- If `current` is the default branch (`master`/`main`) or any branch **not** ending in
+  `-<id>`, create the ticket branch first:
+  ```bash
+  bash $WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch/create_branch.sh <project>#<id> --type feature
+  ```
+
+**Base-branch caveat**: `create_branch.sh` branches off the **current HEAD**, not the
+default branch. Check out the intended base (usually `master`; or another in-flight
+ticket's branch if this work stacks on it) *before* running it. If the planning phase
+already created the branch, you will simply be on it — verify and continue. When the
+correct base is ambiguous, stop and ask the user.
+
+Do not proceed to Step 1 until `git rev-parse --abbrev-ref HEAD` ends in `-<id>`.
+
+---
+
 ### Step 1 — Assess complexity and select model
 
 Before writing any code, classify the task using the design document:

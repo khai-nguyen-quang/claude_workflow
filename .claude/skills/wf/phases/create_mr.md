@@ -15,10 +15,19 @@ python3 $WORKSPACE_ROOT/claude_workflow/tools/gitlab/fetch_ticket_description.py
 ```
 Use the issue title and description to fill the template.
 
-**Step 3 — determine the source branch**
+**Step 3 — determine and verify the source branch**
 Run inside `$WORKSPACE_ROOT/<project>`: `git rev-parse --abbrev-ref HEAD`.
-If the branch is the default branch (e.g. `main`/`master`), stop and ask the user which
-branch to use.
+
+The branch must belong to **this** ticket — its name must end in `-<id>` (the convention
+is `feature/<slug>-<id>` / `bug/<slug>-<id>`). Stop and ask the user how to proceed if
+either of these holds:
+- the branch is the default branch (`main`/`master`), or
+- the branch name does **not** end in `-<id>` (it belongs to a different ticket, e.g.
+  `feature/other-work-295` while creating the MR for `#341`).
+
+This guard catches the case where coding ran on the wrong branch (the Step 0 branch setup
+in `instructions/coding.md` was skipped); do not silently open an MR from a mismatched
+branch.
 
 **Confirm before pushing** (pushing code is outward-facing). Show the user the branch
 name, the remote it will push to, and the commits ahead of the remote

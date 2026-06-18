@@ -10,6 +10,9 @@ Produce a strategy document and a detailed design document for a GitLab issue. T
 - `<id>` — GitLab issue number (e.g. `309`)
 - `WORKSPACE_ROOT` — absolute path to the workspace root
 - `<state_context>` — content of `_state.md` if resuming a previous session (may be absent)
+- `<brainstorm_spec>` — `.tmp/<project>-<id>/<project>-<id>_brainstorm.md`, the design spec
+  approved during the planning phase's brainstorming step. When present, it is the primary
+  source for the strategy and design; the raw issue is supporting context.
 
 ---
 
@@ -27,6 +30,35 @@ that reading yet, do it now before continuing.
 > **Mode**: Use Claude Plan Mode for planning steps.
 > **Model**: `claude-opus-4-8`
 
+### Step 0 — Set up the working branch
+
+Before producing any artifacts, make sure the repo is on the ticket's dedicated branch so
+the whole ticket lifecycle (planning → coding → MR) stays on one branch.
+
+```bash
+cd "$WORKSPACE_ROOT/<project>"
+current="$(git rev-parse --abbrev-ref HEAD)"
+```
+
+- If `current` already ends in `-<id>` (e.g. `feature/<slug>-<id>` or `bug/<slug>-<id>`),
+  you are on the ticket branch — continue.
+- Otherwise create it:
+  ```bash
+  bash $WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch/create_branch.sh <project>#<id> --type feature
+  ```
+  `create_branch.sh` enforces the `feature/<slug>-<id>` (or `bug/...`) convention and
+  checks out the new branch.
+
+**Base-branch caveat**: `create_branch.sh` branches off the **current HEAD**, not the
+default branch. If this ticket should start from `master`, check out `master` (or the
+agreed base branch) *before* running it; if it stacks on another in-flight ticket, check
+out that ticket's branch first. When unsure which base is correct, ask the user.
+
+If the branch already exists from a previous session, `create_branch.sh` aborts — just
+`git checkout` it instead.
+
+---
+
 ### Step 1 — Fetch issue content
 
 Use tools in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/` to fetch the issue description:
@@ -39,6 +71,10 @@ Extract from the issue:
 - Goal of the work: what problem is being solved?
 - Acceptance criteria or expected outcome
 - Any linked issues, MRs, or references
+
+If `<brainstorm_spec>` exists, read it first and treat it as the approved design intent; use
+the issue here only to fill gaps and confirm scope. Do not re-litigate decisions already
+settled in the spec.
 
 If you need a tool that does not exist, implement it following `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`.
 

@@ -17,7 +17,7 @@ If args are empty, print this usage and stop:
 Usage: /wf <phase> <ref>
 
 Phases:
-  planning      Phase 1 — strategy + design document        [wf-planner agent]
+  planning      Phase 1 — brainstorm + strategy + design    [superpowers:brainstorming → wf-planner]
   plan-review   Phase 2 — review design docs for conflicts
   coding        Phase 3 — implement the approved design     [wf-coder agent]
   test          Phase 4 — write unit and integration tests
@@ -78,7 +78,7 @@ Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`. From its
 
 If the file or the subsection is missing, set `<technical_note>` = `(not available)` and warn: "No `<project>` must_read / matching subsection found. Run `/wf collect <project>` first."
 
-Agent phases inject `<technical_note>` into the agent prompt (see each phase file). The inline phases (`plan-review`, `test`, `lint`) run in the main session, which now holds `<technical_note>` — apply it. `CLAUDE.md` (project architecture) is still read by each agent via its **Required reading**; the skill forwards only the targeted Technical note subsection.
+Agent phases inject `<technical_note>` into the agent prompt (see each phase file). The inline phases (`plan-review`, `test`, `lint`) run in the main session, which now holds `<technical_note>` — apply it. The `planning` phase also runs its brainstorming step inline in the main session before spawning the agent, so it likewise holds `<technical_note>`. `CLAUDE.md` (project architecture) is still read by each agent via its **Required reading**; the skill forwards only the targeted Technical note subsection.
 
 ## Phase dispatch
 

@@ -13,7 +13,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 
 # shellcheck source=claude_workflow/tools/gitlab/_env.sh
 source "${SCRIPT_DIR}/../_env.sh"
@@ -81,6 +81,15 @@ iid="$(echo "${ref_parts}" | cut -d' ' -f3)"
 
 if [[ "${kind}" != "issue" ]]; then
   echo "Error: '${ticket_ref}' is a merge request, not an issue." >&2
+  exit 1
+fi
+
+# The project repo lives in a subdirectory of the workspace (e.g.
+# $WORKSPACE_ROOT/openpilot), not at the workspace root itself.
+project_name="${project_path##*/}"
+REPO_ROOT="${WORKSPACE_ROOT}/${project_name}"
+if [[ ! -d "${REPO_ROOT}/.git" ]]; then
+  echo "Error: local repo not found at '${REPO_ROOT}'." >&2
   exit 1
 fi
 
