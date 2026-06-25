@@ -2,12 +2,13 @@
 
 ## Goal
 
-Write unit and integration tests for the code changes produced in the Coding phase. All tests must pass before the phase is complete.
+Write unit and integration tests for the code changes produced in the Coding phase. All tests must pass before the phase is complete. This serves both a **GitLab issue** and a **free-form** run identically — it operates on the working-tree changes regardless of source.
 
 ## Inputs (from task context)
 
-- `<project>` — GitLab project name (e.g. `projectX`)
-- `<id>` — GitLab issue number
+- `<work_slug>` — canonical run identifier, derived from `<ref>`: `<project>-<id>` for a GitLab issue, or the free-form slug otherwise (the same slug the coding phase used). State lives under `.tmp/<work_slug>/`.
+- `<project>` — GitLab project name (e.g. `projectX`); may be `(unknown)` for a free-form slug.
+- `<id>` — GitLab issue number; empty for a free-form request.
 - `WORKSPACE_ROOT` — absolute path to the workspace root
 - Code changes from Phase 3 (Coding)
 - `<state_context>` — content of `_state.md` if resuming (may be absent)
@@ -112,4 +113,4 @@ Proceed to Phase 5: Code quality assurance.
 
 - Unit test source files (per naming convention in `## Unit test framework`)
 - Integration test source files (per naming convention in `## Integration test framework`)
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md` — updated after tests pass
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_state.md` — updated after tests pass

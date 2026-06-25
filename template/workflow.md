@@ -79,7 +79,7 @@ If the user provides a project/issue in their message, use that instead of scann
 ---
 
 ### Phase 1: Planning
-- This phase can be invoked individually with prompt format "Planning <project>#<number>". Example: "Planning projectX#309"
+- This phase can be invoked individually with prompt format "Planning <project>#<number>" for a GitLab issue (e.g. "Planning projectX#309"), or with a free-form slug / project name when there is no issue (e.g. "Planning fcw_alert_tuning"), describing the feature in the prompt.
 - Inform user that you are entering "Planning phase"
 - Planning starts with a **brainstorming step**: it delegates to the `superpowers:brainstorming` skill to turn the ticket into an approved design spec (`*_brainstorm.md`), then hands that spec to the wf-planner. Brainstorming stops after the spec is approved — it does **not** run into `writing-plans`; the wf-planner does the planning.
 - Planning phase includes brainstorming the high-level approach (the brainstorm spec replaces the old strategy document) and writing the design document

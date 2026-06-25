@@ -8,7 +8,15 @@ Fix code based on review findings. Two sources are supported: online (GitLab MR 
 
 ## Prerequisites (complete before any step)
 
-Derive `<project>` from the GitLab ref in your task context (the part before `#`).
+This single workflow fixes review findings from either source; the GitLab steps are gated
+**(online / MR only)**. The variant is `<work_source>`:
+- **Online** — `<ref>` is a GitLab MR (e.g. `projectX#MR!186`): fetch live comments from the MR.
+- **Offline** — `<ref>` is an issue/free-form ref, or none: read the review file already on disk.
+
+`<work_slug>` is the `.tmp/` key for the artifacts this phase reads/writes: `<project>-<id>` for an
+issue ref, the free-form slug for a free-form ref, or `<project>-mr-<id>` for an MR. `<project>` may
+be `(unknown)` for a free-form slug.
+
 Apply the **`## Technical note` constraints provided in your task context** throughout the entire
 fix — the skill forwards them (and the `## Setup commands` block) and is the single source. If
 absent or `(not available)`, note the gap and continue; do not read the must_read file yourself.
@@ -18,14 +26,17 @@ absent or `(not available)`, note the gap and continue; do not read the must_rea
 
 ## Step 1 — Determine review source
 
-| Input | Source |
+Pick the branch by ref; the GitLab steps in the online branch are gated to MR refs. Then run
+**Step 2 onward (shared)** identically for both.
+
+| Input | Branch |
 |---|---|
-| A GitLab MR ref (e.g. `projectX#MR!186`) | **Online** — fetch comments from GitLab |
-| A project/issue ref (e.g. `projectX#186`) or no ref | **Offline** — read local review file |
+| A GitLab MR ref (e.g. `projectX#MR!186`) | **Online (MR only)** — fetch live comments from GitLab |
+| An issue / free-form ref, or no ref | **Offline** — read the review file on disk |
 
 ---
 
-## Online workflow
+## Online branch (GitLab MR only)
 
 ### Step 1.O — Fetch MR comments
 
@@ -82,12 +93,12 @@ Organise open items by severity: Critical → Major → Medium → Minor. If a c
 
 ---
 
-## Offline workflow
+## Offline branch (review file on disk)
 
 ### Step 1.F — Locate review file
 
 Look for the review file at:
-- Issue: `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_review.md`
+- Issue / free-form: `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_review.md`
 - MR: `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md`
 
 If no file is found, stop and ask the user to provide the path.

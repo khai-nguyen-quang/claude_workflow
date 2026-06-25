@@ -12,7 +12,7 @@ Spawn an Agent with:
   <setup_commands>
 
   ## Task
-  GitLab ref: <ref>
+  Review ref/slug: <ref>   (MR ref → online branch; issue/free-form ref or none → offline branch)
   WORKSPACE_ROOT: $WORKSPACE_ROOT
   Instructions: $WORKSPACE_ROOT/claude_workflow/instructions/fix_review.md
 

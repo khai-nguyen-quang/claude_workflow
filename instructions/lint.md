@@ -1,6 +1,6 @@
 # Instructions
 
-Fix lint violations using the appropriate language skill for each language.
+Fix lint violations using the appropriate language skill for each language. This serves a **GitLab issue** and a **free-form** run identically — it operates on the working-tree changes and uses the forwarded `## Setup commands`, so it needs no GitLab ref or per-run slug. (`<project>` may be `(unknown)` for a free-form slug; rely on the forwarded blocks, and fall back to `CLAUDE.md`/`README.md` only when `<project>` resolves.)
 
 ## Step 1 — Load project context and lint commands
 

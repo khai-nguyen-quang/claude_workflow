@@ -4,7 +4,7 @@ description: >
   Run a single Claude workflow phase for a GitLab issue or MR.
   Usage: /wf <phase> <ref>
   Phases: planning, plan-review, coding, test, lint, review, fix_review, create_mr, collect, debug
-  Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf create_mr projectX#309  |  /wf fix_review projectX#MR!186  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
+  Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf planning fcw_alert_tuning  |  /wf create_mr projectX#309  |  /wf fix_review projectX#MR!186  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
 ---
 
 ## Parse args
@@ -17,12 +17,12 @@ If args are empty, print this usage and stop:
 Usage: /wf <phase> <ref>
 
 Phases:
-  planning      Phase 1 — brainstorm + design               [superpowers:brainstorming → wf-planner]
+  planning      Phase 1 — brainstorm + design (issue or free-form) [superpowers:brainstorming → wf-planner]
   plan-review   Phase 2 — review design docs for conflicts
   coding        Phase 3 — implement the approved design     [wf-coder agent]
   test          Phase 4 — write unit and integration tests
   lint          Phase 5 — fix lint / code quality violations
-  review        Phase 6 — review code or a GitLab MR        [wf-reviewer agent]
+  review        Phase 6 — review code or a GitLab MR        [wf-reviewer → superpowers cross-check]
   fix_review    Phase 7 — fix review comments               [wf-coder agent]
   create_mr     Phase 8 — create the MR for a completed issue
   collect       Utility — collect project context into a must-read file
@@ -31,9 +31,9 @@ Phases:
 Ref formats:
   projectX#309        GitLab issue 309 in projectX
   projectX#MR!177     GitLab MR 177 in projectX
-  projectX            Project name only (for collect phase)
+  projectX            Project name only (collect; or free-form planning / local review of projectX)
   projectX#123        GitLab issue for debug phase
-  fcw_not_alert       Free-form bug slug (describe bug in the prompt message)
+  fcw_not_alert       Free-form slug — describe the work in the prompt (debug or planning)
 ```
 
 If the first token is `start` or `stop`, handle **Sticky mode** below and stop.

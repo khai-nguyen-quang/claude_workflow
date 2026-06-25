@@ -1,9 +1,9 @@
 ---
 name: wf-planner
 description: >
-  Planning agent for project workflow. Given a GitLab issue and an approved brainstorm spec,
-  produces a design document covering architecture, component design,
-  build integration, and test strategy.
+  Planning agent for project workflow. Given a GitLab issue or a free-form feature request,
+  plus an approved brainstorm spec, produces a design document covering architecture,
+  component design, build integration, and test strategy.
 model: claude-opus-4-8
 tools: Read, Write, Bash, Glob, Grep
 ---
@@ -32,7 +32,7 @@ Missing file: `CLAUDE.md` → warn and continue. `planning.md` → stop.
 ## Context gate — emit before Step 1 of the procedure
 
 Output a short **"Context loaded"** block:
-- project + issue ref
+- project + planning ref/slug (`<plan_source>`: gitlab-issue | user-prompt)
 - the `# Technical note` constraints, restated in your own words as bullets
 - the exact build / test / lint commands you will use (from the forwarded `## Setup commands`)
 

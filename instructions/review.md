@@ -222,13 +222,20 @@ Present findings in two parts: a **summary table** for at-a-glance overview, fol
 
 ### Summary table
 
-| # | Severity | File | Line | Issue | Rule |
-|---|----------|------|------|-------|------|
-| 1 | Critical | foo.cc | 42 | Null pointer dereferenced before null check | C.149 |
-| 2 | Major | bar.py | 17 | Socket fd leaked on error path | resource-leak |
-| 3 | Medium | baz.sh | 8 | Unquoted variable expansion | SC2086 |
+| # | Severity | Source | File | Line | Issue | Rule |
+|---|----------|--------|------|------|-------|------|
+| 1 | Critical | wf | foo.cc | 42 | Null pointer dereferenced before null check | C.149 |
+| 2 | Major | wf | bar.py | 17 | Socket fd leaked on error path | resource-leak |
+| 3 | Medium | wf | baz.sh | 8 | Unquoted variable expansion | SC2086 |
 
 Sort rows: Critical first, then Major, Medium, Minor.
+
+**Source column.** Write `wf` for every finding you (the wf-reviewer) report. After you finish,
+the skill runs a **superpowers cross-check** (see `phases/review.md`) that reconciles this file and
+rewrites the column to one of: `wf + sp` (cross-check independently found it too — highest
+confidence), `sp` (cross-check found it, you missed it), or `wf (disputed)` (cross-check judged
+your finding a likely false positive — the row is kept with the cross-check's reasoning appended).
+You always emit `wf`; the cross-check stage owns the other values.
 
 ### Fix blocks
 
@@ -266,45 +273,55 @@ the wf pass graded the same finding *Medium*. That under-grade is the failure th
 
 ---
 
-## MR Review workflow
+## Review workflow
 
-### Step 1 — Fetch review content
+This **single** workflow applies to both a GitLab MR ref and a local code review. Every step is
+identical except the sub-steps marked **(MR only)**. First fix the review target:
 
-Use tools in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/` to:
-1. Fetch the MR description (`fetch_mr_content.sh`)
-2. Fetch the GitLab issue associated with the MR (`fetch_issue_from_mr.py`)
+- **MR review** — `<ref>` contains `MR!`. The branch is already checked out by the skill's
+  pre-step; the diff under review is `git diff origin/master...HEAD`. Report file:
+  `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md`.
+- **Local review** — `<ref>` has no `MR!`. The diff under review is the current branch vs
+  `origin/master`, plus any uncommitted changes (`git diff`, `git diff --staged`). Report file:
+  `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_review.md`
+  (`<project>_review.md` when `<ref>` carries no `#<id>`).
 
-If a needed tool does not exist, implement it following `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`.
+Below, **"the report file"** means whichever path the target above selects.
 
-Store the following in `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md`:
-- `## Why MR is needed` — one-paragraph summary of the associated issue
-- `## Brief of changes` — one-paragraph summary of what the MR changes
+### Step 1 — Establish context
+
+1. **Change summary** — write two paragraphs to the top of the report file:
+   - `## Why the change is needed` — the motivation.
+   - `## Brief of changes` — what the diff changes.
+
+   **(MR only)** Source these from GitLab: fetch the MR description (`fetch_mr_content.sh`) and the
+   linked issue (`fetch_issue_from_mr.py`) with tools in
+   `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/`; if a needed tool is missing, implement it per
+   `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`. For a **local** review, derive the two
+   paragraphs from the branch's commit messages and the intent stated in your task context — no
+   GitLab fetch.
+
+2. **Project context** — apply the Technical note constraints provided in your task context (the
+   skill forwards them; it is the single source). Scan `$WORKSPACE_ROOT/<project>/docs/` for
+   documentation of the modules the diff touches and read the relevant files.
+
+3. **Language skills** — for each changed file, detect the language and load the matching skill:
+   - `.cc` / `.h` → `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`
+   - `.py` → `$WORKSPACE_ROOT/claude_workflow/skills/python/SKILL.md`
+   - `.sh` → `$WORKSPACE_ROOT/claude_workflow/skills/shell/SKILL.md`
+   - other file types → review for logic, structure, and obvious issues without a language skill
+
+   If the language is ambiguous, ask before proceeding.
 
 ---
 
-### Step 2 — Load project context
-
-Scan `$WORKSPACE_ROOT/<project>/docs/` for documentation of modules touched by the MR. Read any relevant files.
-
----
-
-### Step 3 — Load language skills
-
-For each changed file, detect the language and load the matching skill:
-- `.cc` / `.h` → `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`
-- `.py` → `$WORKSPACE_ROOT/claude_workflow/skills/python/SKILL.md`
-- `.sh` → `$WORKSPACE_ROOT/claude_workflow/skills/shell/SKILL.md`
-- Other file types → review for logic, structure, and obvious issues without a language skill
-
----
-
-### Step 4 — Review the diff
+### Step 2 — Review the diff
 
 First, for each module the diff touches, emit its **Pass 0 — Module comprehension** "Module map" (see **Structured review passes**). Do not begin the per-file passes for a module until its Module map is written. Then, for each changed file, run all seven passes (Architecture → Correctness → Safety → Performance → Idioms → Test adequacy → Observability). Findings must be about changed lines, but **read enough surrounding and caller context to judge each change correctly** — a changed block is reviewed in the context of the unchanged code that calls it and that it calls (see Evidence and verification discipline #1), and against its module's phase/timing map (Pass 0). Flag each violation with its rule code; append the seven-column coverage table row after each file.
 
-**Writing the report file is mandatory and is not optional on any run.** Write findings into `## Review` of `<project>-mr-<id>_review.md`. If the file already exists from a prior run, **overwrite it** with the current run's results — never skip writing because a file is present, and never deliver findings only in the chat response. The chat summary is in addition to the file, not a substitute for it.
+**Writing the report file is mandatory and is not optional on any run** — for MR *and* local reviews. Write findings into `## Review` of the report file. If the file already exists from a prior run, **overwrite it** with the current run's results — never skip writing because a file is present, and never deliver findings only in the chat response. The chat summary is in addition to the file, not a substitute for it.
 
-**Traceability cross-check**: for every fix the MR description or linked issue claims (e.g. "fixed #319"), confirm the change is present in `git diff origin/master...HEAD` (discipline rule #2). Record any claimed-but-absent fix as a Major finding.
+**Traceability cross-check**: for every claimed fix — **(MR)** from the MR description or linked issue (e.g. "fixed #319"), or **(local)** from the branch's commit messages — confirm the change is present in `git diff origin/master...HEAD` (discipline rule #2). Record any claimed-but-absent fix as a Major finding.
 
 #### Requirements traceability (mandatory when the project has a spec/definition doc)
 
@@ -335,18 +352,21 @@ Write the requirements-traceability table into the report file alongside the fin
 
 ---
 
-### Step 5 — Production Readiness Verdict
+### Step 3 — Production Readiness Verdict
 
 Reprint the consolidated findings table (all files, sorted Critical → Major → Medium → Minor) followed by all fix blocks. Then close with a summary table of all changed files and one of:
 - **PRODUCTION READY** — all criteria pass, safe to merge.
 - **NEEDS WORK** — list the critical/major issues that must be fixed before merge.
 - **NOT PRODUCTION READY** — fundamental problems; recommend rewrite of affected sections.
 
-Write the verdict into `<project>-mr-<id>_review.md`.
+Write the verdict into the report file.
+
+> After this step the skill runs the **superpowers cross-check** (see `phases/review.md`) and
+> reconciles both sources into the report file's `Source` column — for MR and local reviews alike.
 
 ---
 
-### Step 6 — Upload findings to MR (only after user approval)
+### Step 4 — Upload findings to MR (MR only — after user approval)
 
 After presenting the review, ask: **"Shall I post these review findings to the MR?"**
 
@@ -358,33 +378,10 @@ If the user wants to select a subset, ask which specific comments to upload. Onl
 
 ---
 
-## Local Code Review workflow
-
-### Step 1 — Load project context and language skill
-
-Apply the **Technical note constraints provided in your task context** (the skill forwards the relevant subsection; it is the single source). If they are absent, skip this step — do not read the must_read file yourself.
-
-Detect the language and load the matching skill:
-- **C++ / `.cc` / `.h`** → `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`
-- **Python / `.py`** → `$WORKSPACE_ROOT/claude_workflow/skills/python/SKILL.md`
-- **Shell / `.sh`** → `$WORKSPACE_ROOT/claude_workflow/skills/shell/SKILL.md`
-
-If ambiguous, ask before proceeding.
-
----
-
-### Step 2 — Review the changes
-
-First emit the **Pass 0 — Module comprehension** "Module map" for each touched module (see **Structured review passes**). Then, for each changed file, run all seven passes (Architecture → Correctness → Safety → Performance → Idioms → Test adequacy → Observability). Flag each violation with its rule code and a concrete fix. Append the seven-column coverage table row after each file. If the module is governed by a numbered-requirement spec doc, also do the **Requirements traceability** sweep described in the MR workflow.
-
----
-
-### Step 3 — Production Readiness Verdict
-
-List all findings ordered by severity (Critical → Major → Medium → Minor), omitting any heading with no findings. Close with one of the three verdicts (PRODUCTION READY / NEEDS WORK / NOT PRODUCTION READY).
-
----
-
 ## Output files
 
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md` — review document (MR workflow only). **Always written**, on every run including re-reviews (overwrite a stale file from a prior run). A review that produces no report file is incomplete, regardless of what was delivered in chat.
+- The **report file** — `<project>-mr-<id>_review.md` for an MR review, or `<project>-<id>_review.md`
+  (`<project>_review.md` when `<ref>` has no `#<id>`) for a local review — under
+  `$WORKSPACE_ROOT/claude_workflow/.tmp/<dir>/`. **Always written**, on every run including
+  re-reviews and local reviews (overwrite a stale file from a prior run). A review that produces no
+  report file is incomplete, regardless of what was delivered in chat.
