@@ -18,25 +18,27 @@ Write unit and integration tests for the code changes produced in the Coding pha
 
 ### Step 1 — Load project context
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`. Extract and store:
+Use the two blocks the skill forwarded in your task context — `## Setup commands` and
+`## Technical note` — and do not read the must_read file yourself; if a block is `(not available)`,
+note the gap and proceed. Extract and store:
 
-- **Test commands**:
+- **Test commands** (from `## Setup commands`):
   - Run all unit tests → `## Run unit tests` → `<unit_tests_all>`
   - Run a single unit test file → `## Run unit tests` → `<unit_tests_file>`
   - Run all integration tests → `## Run integration tests` → `<itest_all>`
   - Run a single integration test → `## Run integration tests` → `<itest_file>`
 
-- **Unit test framework** → `# Technical note` → `## Unit test framework (if any)`:
+- **Unit test framework** (from `## Technical note`) → `## Unit test framework (if any)`:
   - Framework name (e.g. Catch2, GoogleTest, pytest)
   - Test file naming pattern (e.g. `<module>/tests/test_<name>.cc`)
   - Build system registration step (e.g. `env.UnitTest()` in SConscript)
 
-- **Integration test framework** → `# Technical note` → `## Integration test framework (if any)`:
+- **Integration test framework** (from `## Technical note`) → `## Integration test framework (if any)`:
   - Framework name (e.g. pytest)
   - Test file naming pattern (e.g. `<module>/tests/test_<name>_docker.py`)
   - Required environment or infrastructure (e.g. Docker, mock hardware, specific fixtures)
 
-- **Other constraints** → `# Technical note` → `## Others`
+- **Other constraints** (from `## Technical note`) → `## Others`
 
 If the file does not exist, fall back to `$WORKSPACE_ROOT/<project>/CLAUDE.md` or `README.md`.
 

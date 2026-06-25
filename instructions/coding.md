@@ -17,9 +17,11 @@ Implement the approved design document into production-ready source code. Every 
 ## Prerequisites (complete before any step)
 
 Derive `<project>` from the GitLab ref in your task context (the part before `#`).
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
-Apply every constraint in its `# Technical note` section throughout the entire implementation.
-**Do not proceed to any step below until this file is read.**
+Apply the **`## Technical note` constraints provided in your task context** throughout the entire
+implementation — the skill forwards them (and the `## Setup commands` block) and is the single
+source. If absent or `(not available)`, note the gap and continue; do not read the must_read file
+yourself.
+**Do not proceed to any step below until these constraints are loaded.**
 
 ---
 
@@ -69,13 +71,14 @@ State the chosen complexity tier and the reason. If the task spans tiers, use th
 
 ### Step 2 — Extract from project context
 
-From the `must_read.md` already read in Prerequisites, extract and store:
-- `<compile_cmd>` from `## Compilation`
+From the blocks the skill forwarded in your task context — `## Setup commands` and
+`## Technical note` (do not read the must_read file yourself) — extract and store:
+- `<compile_cmd>` from `## Compilation` (in `## Setup commands`)
 - Unit test framework, file naming pattern, and registration steps from `## Unit test framework (if any)`
 - Integration test framework, file naming pattern, and required environment from `## Integration test framework (if any)`
 - Project-specific constraints from `## Others`
 
-If the file did not exist, fall back to `$WORKSPACE_ROOT/<project>/CLAUDE.md` or `README.md`.
+If a forwarded block is `(not available)`, fall back to `$WORKSPACE_ROOT/<project>/CLAUDE.md` or `README.md`.
 
 ---
 

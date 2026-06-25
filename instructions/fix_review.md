@@ -9,9 +9,10 @@ Fix code based on review findings. Two sources are supported: online (GitLab MR 
 ## Prerequisites (complete before any step)
 
 Derive `<project>` from the GitLab ref in your task context (the part before `#`).
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
-Apply every constraint in its `# Technical note` section throughout the entire fix.
-**Do not proceed to any step below until this file is read.**
+Apply the **`## Technical note` constraints provided in your task context** throughout the entire
+fix — the skill forwards them (and the `## Setup commands` block) and is the single source. If
+absent or `(not available)`, note the gap and continue; do not read the must_read file yourself.
+**Do not proceed to any step below until these constraints are loaded.**
 
 ---
 
@@ -99,11 +100,12 @@ Read the review file. Extract all findings that have a `Fix:` block. Group by se
 
 ## Step 2 — Load project context and language skills
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and extract:
+From the `## Setup commands` block forwarded in your task context (do not read the must_read file
+yourself), extract:
 - `<compile_cmd>` for build verification
 - `<unit_tests_all>` for test verification
 
-If the file does not exist, fall back to the project's `CLAUDE.md`.
+If the block is `(not available)`, fall back to the project's `CLAUDE.md`.
 
 For each finding, detect the language of the affected file and load the matching skill:
 - `.cc` / `.h` → `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`

@@ -51,7 +51,7 @@ If the user provides a project/issue in their message, use that instead of scann
 - **Phase**: <phase number and name>
 
 ## Completed steps
-- [x] Phase 1 – Strategy approved
+- [x] Phase 1 – Brainstorm spec approved
 - [x] Phase 1 – Design approved
 - [x] Phase 2 – Planning review passed
 - [ ] Phase 3 – Coding in progress
@@ -67,9 +67,9 @@ If the user provides a project/issue in their message, use that instead of scann
 
 | Files present | Inferred state |
 |---|---|
-| No files | Phase 1 — start strategy |
-| `_strategy.md` only | Phase 1 — strategy done, awaiting design |
-| `_strategy.md` + `_design.md` | Phase 2 — planning review |
+| No files | Phase 1 — start brainstorming |
+| `_brainstorm.md` only | Phase 1 — brainstorm done, awaiting design |
+| `_brainstorm.md` + `_design.md` | Phase 2 — planning review |
 | Above + review passed noted | Phase 3 — start coding |
 | Source code changes in git | Phase 4 — write tests |
 | Tests written | Phase 5 — lint/QA |
@@ -82,13 +82,13 @@ If the user provides a project/issue in their message, use that instead of scann
 - This phase can be invoked individually with prompt format "Planning <project>#<number>". Example: "Planning projectX#309"
 - Inform user that you are entering "Planning phase"
 - Planning starts with a **brainstorming step**: it delegates to the `superpowers:brainstorming` skill to turn the ticket into an approved design spec (`*_brainstorm.md`), then hands that spec to the wf-planner. Brainstorming stops after the spec is approved — it does **not** run into `writing-plans`; the wf-planner does the planning.
-- Planning phase includes making strategy and design document
+- Planning phase includes brainstorming the high-level approach (the brainstorm spec replaces the old strategy document) and writing the design document
 - The design document embeds Mermaid diagrams (block / architectural / sequence) following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`.
 - **How**: Uses `$WORKSPACE_ROOT/claude_workflow/instructions/planning.md` as the main instruction going through all steps of planning phase.
-- **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_strategy.md` and `_design.md` to determine which step to resume.
+- **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_brainstorm.md` and `_design.md` to determine which step to resume.
 - **Input**: Gitlab Issue number or Gitlab Merge Request
-- **Output**: `*_brainstorm.md`, `*_strategy.md`, `*_design.md`
-- **State update**: Write `_state.md` after the brainstorm spec is approved; update it after strategy is approved, and again after design is approved.
+- **Output**: `*_brainstorm.md`, `*_design.md`
+- **State update**: Write `_state.md` after the brainstorm spec is approved, and again after design is approved.
 
 ### Phase 2: Planning review
 - This phase can be invoked individually with prompt format "Planning review <project>#<number>". Example: "Planning review projectX#309"
@@ -145,7 +145,7 @@ If the user provides a project/issue in their message, use that instead of scann
 ### Debug (utility)
 - Invoke with `/wf debug <ref>` where `<ref>` is either a GitLab issue (`projectX#123`) or a free-form bug slug (`fcw_not_alert`).
 - Fetches bug description from GitLab when given an issue ref; otherwise the user describes the bug in the prompt.
-- Loads `# Technical note` from `projects/<project>_must_read.md` and discovers relevant module docs (e.g. `docs/managerd.md`, `tools/sim/README.md`) from keywords in the bug description.
+- The skill (sole reader of `projects/<project>_must_read.md`) forwards `# Technical note` and the `# Setup instructions` commands to the subagent, and discovers relevant module docs (e.g. `docs/managerd.md`, `tools/sim/README.md`) from keywords in the bug description.
 - Spawns a `wf-debugger` subagent to search code, form hypotheses, and write a root cause analysis.
 - **Temp files**: stored under `$WORKSPACE_ROOT/claude_workflow/.tmp/debug/<slug>/`
   - `<slug>_state.md` — investigation state (updated after each major step)

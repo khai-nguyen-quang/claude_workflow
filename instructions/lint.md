@@ -4,12 +4,13 @@ Fix lint violations using the appropriate language skill for each language.
 
 ## Step 1 — Load project context and lint commands
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and extract:
+From the `## Setup commands` block the skill forwarded in your task context (do not read the
+must_read file yourself), extract:
 - `<lint_all>` — command to lint all files
 - `<lint_file>` — command to lint a specific file
 
-Apply any guidance from the `# Technical note` section throughout this phase.
-If the file does not exist, fall back to the project's `CLAUDE.md` or `README.md` for lint commands.
+Apply any guidance from the forwarded `## Technical note` block throughout this phase.
+If a forwarded block is `(not available)`, fall back to the project's `CLAUDE.md` or `README.md` for lint commands.
 
 ## Step 2 — Determine scope
 

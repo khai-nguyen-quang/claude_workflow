@@ -17,7 +17,7 @@ If args are empty, print this usage and stop:
 Usage: /wf <phase> <ref>
 
 Phases:
-  planning      Phase 1 — brainstorm + strategy + design    [superpowers:brainstorming → wf-planner]
+  planning      Phase 1 — brainstorm + design               [superpowers:brainstorming → wf-planner]
   plan-review   Phase 2 — review design docs for conflicts
   coding        Phase 3 — implement the approved design     [wf-coder agent]
   test          Phase 4 — write unit and integration tests
@@ -67,18 +67,33 @@ When the hook routes a bare message here, parse and dispatch it exactly as a nor
 **Step 2 — load state file** (skip for `collect`)
 Read `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md` if it exists → `<state_context>`.
 
-**Step 3 — forward the phase's Technical note subsection** (skip for `collect`)
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`. From its `# Technical note` section, extract the subsection for this phase — match by heading **text** at any level (`##` or `###`), capturing from that heading through to the next heading of equal-or-higher level — into `<technical_note>`:
+**Step 3 — forward must_read context** (skip for `collect`)
+Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` **once** — the skill is the
+**single reader** of this file. Agents and instruction files never read it themselves; they consume
+only what the skill forwards. Extract two blocks:
 
-| Phase | Subsection forwarded |
-|-------|----------------------|
-| `planning`, `plan-review`, `review` | `Features` |
-| `coding`, `test`, `lint`, `fix_review` | `Coding and Testing` |
-| `debug` | the entire `# Technical note` |
+1. `<technical_note>` — from its `# Technical note` section, the subsection for this phase, matched
+   by heading **text** at any level (`##` or `###`), capturing from that heading through to the next
+   heading of equal-or-higher level:
 
-If the file or the subsection is missing, set `<technical_note>` = `(not available)` and warn: "No `<project>` must_read / matching subsection found. Run `/wf collect <project>` first."
+   | Phase | Subsection forwarded |
+   |-------|----------------------|
+   | `planning`, `plan-review`, `review` | `Features` |
+   | `coding`, `test`, `lint`, `fix_review` | `Coding and Testing` |
+   | `debug` | the entire `# Technical note` |
 
-Agent phases inject `<technical_note>` into the agent prompt (see each phase file). The inline phases (`plan-review`, `test`, `lint`) run in the main session, which now holds `<technical_note>` — apply it. The `planning` phase also runs its brainstorming step inline in the main session before spawning the agent, so it likewise holds `<technical_note>`. `CLAUDE.md` (project architecture) is still read by each agent via its **Required reading**; the skill forwards only the targeted Technical note subsection.
+2. `<setup_commands>` — the **entire `# Setup instructions` section** (compile / unit-test /
+   integration-test / lint / run commands), reproduced verbatim. Forwarded for **every** phase.
+
+If the file is missing, set both blocks to `(not available)` and warn: "No `<project>` must_read
+found. Run `/wf collect <project>` first." If only the matching Technical note subsection is
+missing, set `<technical_note>` = `(not available)` and warn likewise.
+
+Agent phases inject both `<technical_note>` and `<setup_commands>` into the agent prompt (see each
+phase file). The inline phases (`plan-review`, `test`, `lint`) and the `planning` brainstorming
+step run in the main session, which now holds both blocks — apply them. `CLAUDE.md` (project
+architecture) is still read by each agent via its **Required reading**; the skill is the **sole
+source for all `_must_read.md`-derived content** (both the Technical note and the setup commands).
 
 ## Phase dispatch
 

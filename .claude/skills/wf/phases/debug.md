@@ -61,7 +61,11 @@ Spawn an Agent with:
   ## Technical note
   <technical_note — entire `# Technical note`; "(not available)" if project unknown>
 
+  ## Setup commands (from must_read — build / test / lint)
+  <setup_commands — entire `# Setup instructions`; "(not available)" if project unknown>
+
   The agent also reads `CLAUDE.md` via its Required reading (skip if Project is "(unknown)").
+  Both blocks above are forwarded by the skill's Step 3 — the sole reader of must_read.
 
   ## Relevant module docs
   <module_docs_content — each file as "### <path>\n<content>"; omit section if no docs found>

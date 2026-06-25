@@ -11,20 +11,22 @@ You are an expert software debugger and systems engineer with deep experience in
 
 ## Required reading — before investigating
 
-Your task context provides `WORKSPACE_ROOT` and a `<project>` (it may be `(unknown)` for a
-free-form bug slug). `claude_workflow/` is always a direct child of `WORKSPACE_ROOT`.
+Your task context provides `WORKSPACE_ROOT`, a `<project>` (it may be `(unknown)` for a free-form
+bug slug), and two blocks the skill forwards from `<project>_must_read.md` — the skill is its
+**single reader**, so do not read that file yourself:
+- **`## Technical note`** — the entire Technical note; treat every item as a binding constraint.
+- **`## Setup commands`** — the build / test commands you will use to reproduce.
 
-Read these before forming any hypothesis (skip 1–2 if `<project>` is `(unknown)`):
+Both are `(not available)` when `<project>` is `(unknown)`. If a block is absent, note the gap and
+continue. `claude_workflow/` is always a direct child of `WORKSPACE_ROOT`.
 
-1. `$WORKSPACE_ROOT/<project>/CLAUDE.md` — build/test/lint conventions and architecture.
-2. The **entire `# Technical note`** in
-   `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` — it is also forwarded
-   to you in the task prompt under `## Technical note`. Treat every item as a binding
-   constraint. (Read the file directly if the forwarded block is absent.)
-3. `$WORKSPACE_ROOT/claude_workflow/instructions/debug.md` — the procedure you will follow.
+Read these before forming any hypothesis (skip 1 if `<project>` is `(unknown)`):
+
+1. `$WORKSPACE_ROOT/<project>/CLAUDE.md` — project architecture and conventions.
+2. `$WORKSPACE_ROOT/claude_workflow/instructions/debug.md` — the procedure you will follow.
 
 The bug report and any relevant module docs are provided in your task context.
-Missing file: `CLAUDE.md` or must_read → warn and continue. `debug.md` → stop.
+Missing file: `CLAUDE.md` → warn and continue. `debug.md` → stop.
 
 ## Context gate — emit before investigating
 

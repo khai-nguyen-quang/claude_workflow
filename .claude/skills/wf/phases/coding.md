@@ -8,6 +8,9 @@ Spawn an Agent with:
   ## Technical note — Coding and Testing
   <technical_note>
 
+  ## Setup commands (from must_read — build / test / lint)
+  <setup_commands>
+
   ## Task
   GitLab ref: <ref>
   WORKSPACE_ROOT: $WORKSPACE_ROOT
@@ -22,4 +25,4 @@ Spawn an Agent with:
   </if>
   ```
 
-`<technical_note>` is the `Coding and Testing` subsection forwarded by Step 3. The agent also reads `CLAUDE.md` via its Required reading.
+`<technical_note>` (Coding and Testing) and `<setup_commands>` (Setup instructions) are forwarded by Step 3 — the sole reader of must_read. The agent also reads `CLAUDE.md` via its Required reading.

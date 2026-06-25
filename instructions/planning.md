@@ -2,7 +2,7 @@
 
 ## Goal
 
-Produce a strategy document and a detailed design document for a GitLab issue. These two artifacts are the only inputs the Coding phase accepts — both must be approved by the user before work proceeds.
+Produce a detailed design document for a GitLab issue, building on the approved brainstorm spec. The brainstorm spec (high-level approach) and the design document are the inputs the Coding phase accepts — both must be approved by the user before work proceeds.
 
 ## Inputs (from task context)
 
@@ -11,17 +11,18 @@ Produce a strategy document and a detailed design document for a GitLab issue. T
 - `WORKSPACE_ROOT` — absolute path to the workspace root
 - `<state_context>` — content of `_state.md` if resuming a previous session (may be absent)
 - `<brainstorm_spec>` — `.tmp/<project>-<id>/<project>-<id>_brainstorm.md`, the design spec
-  approved during the planning phase's brainstorming step. When present, it is the primary
-  source for the strategy and design; the raw issue is supporting context.
+  approved during the planning phase's brainstorming step. It is the approved high-level
+  approach (replacing a separate strategy document) and the primary source for the design;
+  the raw issue is supporting context.
 
 ---
 
 ## Prerequisites (complete before any step)
 
-You have already completed the **Required reading** in your agent definition (`CLAUDE.md`
-+ the must_read `# Technical note`) and emitted the "Context loaded" gate. Apply every
-constraint from `# Technical note` throughout the entire planning. If you have not done
-that reading yet, do it now before continuing.
+You have already completed the **Required reading** in your agent definition (`CLAUDE.md`), you
+hold the `## Technical note` and `## Setup commands` blocks the skill forwarded, and you emitted
+the "Context loaded" gate. Apply every constraint from the forwarded `## Technical note`
+throughout the entire planning. If you have not done that reading yet, do it now before continuing.
 
 ---
 
@@ -85,53 +86,16 @@ If you need a tool that does not exist, implement it following `$WORKSPACE_ROOT/
 Identify which modules and components are touched by this issue. For each relevant module:
 - Scan `$WORKSPACE_ROOT/<project>/docs/` for matching `.md` files
 - Check `$WORKSPACE_ROOT/<project>/README.md` for top-level architecture
-- Check `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` for project-specific constraints
+- Apply the project-specific constraints from the forwarded `## Technical note` block (already in your context — do not read the must_read file)
 
 Read all found documents. Note any build-system conventions, concurrency rules, or architectural invariants that affect the design.
 
 ---
 
-### Step 3 — Write strategy document
+### Step 3 — Write design document
 
-Write `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_strategy.md` covering:
-
-- **Goal**: one-paragraph restatement of what this issue asks for
-- **Approach**: at a high level, what will be done and what will not
-- **Affected modules**: which existing components are touched
-- **New components**: any new modules, classes, or files to be created
-- **Key risks and unknowns**: anything that could block implementation
-
-Write the state file:
-
-```markdown
-# State: <project>#<id>
-
-## Active work
-- **Project**: <project>
-- **Issue/MR**: #<id>
-- **Type**: issue
-- **Phase**: Phase 1 – Planning (strategy written, awaiting approval)
-
-## Completed steps
-- [x] Issue content fetched
-- [x] Relevant docs read
-- [x] Strategy written
-- [ ] Strategy approved
-- [ ] Design written
-- [ ] Design approved
-
-## Next step
-Present strategy to user and wait for approval before writing design document.
-
-## Key decisions
-(none yet)
-```
-
-**Approval required**: present the strategy to the user and wait for explicit approval before continuing. Do not proceed to the design document until approved.
-
----
-
-### Step 4 — Write design document
+The brainstorm spec (`_brainstorm.md`) is the approved high-level approach and replaces the
+former strategy document. Do not rewrite it — build the design directly on top of it.
 
 Write `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design.md` covering each of the following sections:
 
@@ -168,13 +132,36 @@ Write `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design
 - Unit tests: what to test, which framework and naming convention to use, which edge cases to cover.
 - Integration tests: what interaction boundaries to exercise and what environment is required.
 
-Update the state file: mark "Design written" and set next step to "Present design to user for approval".
+Write the state file:
+
+```markdown
+# State: <project>#<id>
+
+## Active work
+- **Project**: <project>
+- **Issue/MR**: #<id>
+- **Type**: issue
+- **Phase**: Phase 1 – Planning (design written, awaiting approval)
+
+## Completed steps
+- [x] Issue content fetched
+- [x] Relevant docs read
+- [x] Brainstorm spec approved
+- [x] Design written
+- [ ] Design approved
+
+## Next step
+Present design to user for approval.
+
+## Key decisions
+(carried from brainstorm spec)
+```
 
 **Approval required**: present the design to the user and wait for explicit approval before declaring the Planning phase complete. If the user requests changes, revise the document and re-present.
 
 ---
 
-### Step 5 — Final state update
+### Step 4 — Final state update
 
 After design is approved, update `_state.md`:
 
@@ -182,8 +169,7 @@ After design is approved, update `_state.md`:
 ## Completed steps
 - [x] Issue content fetched
 - [x] Relevant docs read
-- [x] Strategy written
-- [x] Strategy approved
+- [x] Brainstorm spec approved
 - [x] Design written
 - [x] Design approved
 
@@ -195,6 +181,6 @@ Proceed to Phase 2: Planning review.
 
 ## Output files
 
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_strategy.md` — high-level approach
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_brainstorm.md` — approved high-level approach (from the brainstorming step; replaces the old strategy doc)
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design.md` — detailed design for coding
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md` — phase state (update after every approved step)

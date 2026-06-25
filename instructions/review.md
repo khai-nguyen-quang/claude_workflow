@@ -17,9 +17,11 @@ Review code changes for correctness, safety, and production readiness. Produce s
 ## Prerequisites (complete before any step)
 
 Derive `<project>` from the GitLab ref in your task context (the part before `#`).
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
-Apply every constraint in its `# Technical note` section throughout the entire review.
-**Do not proceed to any step below until this file is read.**
+Apply the **Technical note constraints provided in your task context** throughout the entire
+review — the skill forwards the relevant subsection and is the single source for them. If they
+are absent or marked `(not available)`, note the gap and continue (do not read the must_read
+file yourself).
+**Do not proceed to any step below until these constraints are loaded.**
 
 ---
 
@@ -30,6 +32,23 @@ All code is reviewed against:
 - **Python**: PEP 8 and PEP 20
 - **Memory safety** (critical): raw `new`/`delete`, buffer overflows, use-after-free
 - **Concurrency** (critical): thread safety, mutex acquisition order, data races
+- **Test adequacy** (critical for behavioural changes): the test suite is a first-class
+  review artifact, not background. Every behaviour the diff adds or changes must have a test
+  that proves it, every critical/sentinel branch must be exercised, and every claim of
+  coverage (docstring, rubric row, comment) must have an implementing test. See **Pass 6**.
+- **Observability / operability**: the system must be diagnosable and tunable from its own
+  outputs in the field — symmetric event logging, enough state emitted to tune thresholds,
+  no config default that silently mutates inherited state. See **Pass 7**.
+- **Requirements traceability**: when the project ships a spec/definition doc with numbered
+  requirements (e.g. a rubric `R1–Rn`), every requirement must trace to both a satisfying
+  code path **and** a test. See **Requirements traceability** under Step 4.
+
+> **What "review the diff" does not mean.** A clean per-line pass over the changed code is
+> *necessary but not sufficient*. The highest-value findings are usually about what is
+> **absent** — the test that should exist and doesn't, the falling-edge log that was never
+> written, the requirement whose code path has a reachable false-negative. Code that reads
+> correctly line-by-line can still be unmergeable because it is untestable, undiagnosable, or
+> silently violates a requirement. Hunt for absence, not just defects in what is present.
 
 ---
 
@@ -77,9 +96,23 @@ finding enters the table:
 
 ---
 
-## Structured review passes (mandatory — do all five passes on every file)
+## Structured review passes (mandatory — Pass 0 once per module, then all seven passes on every file)
 
-To ensure consistent coverage regardless of code size or complexity, review each file in exactly **five sequential passes**. Do not merge passes or skip one because the file "looks clean".
+To ensure consistent coverage regardless of code size or complexity, first build a model of each touched module in **Pass 0**, then review each file in exactly **seven sequential passes**. Do not merge passes or skip one because the file "looks clean". Passes 6 and 7 (test adequacy, observability) are the passes the wf review historically skipped — they are not optional add-ons, they carry the same weight as Passes 1–5.
+
+### Pass 0 — Module comprehension (mandatory, before any per-file pass)
+
+A changed line is correct or buggy only relative to the whole-module picture. Before flagging anything in a module, build and **emit a "Module map"** for it:
+
+- **State machine / phases**: the states or phases the module moves through and what transitions them (e.g. `idle → rebootPending → ...`).
+- **Lifecycle events**: when code runs — startup, reboot, restart, recovery, teardown, per-tick — and which phase each touched function executes in.
+- **Data ownership & timing**: for each field/file/resource the diff touches, who writes it, who reads it, and *at which phase/boot/tick*. Note any value that differs by phase (a file that holds the pre-OTA version at one phase and a new version at another).
+- **Invariants**: what must always hold across the module (preconditions a branch relies on).
+- **The diff on the map**: place each changed block onto the above — which phase it runs in, what it reads/writes, what it assumes.
+
+**Temporal-phase rule**: never claim two code paths contradict each other (e.g. "the same file can't return two values") without showing they run in the *same* phase/boot/tick. Two accesses in different phases, separated by a state reset or reboot, are not a contradiction. A finding that assumes simultaneity must cite the phase/tick in which both paths run.
+
+Emit the Module map per touched module before the per-file passes for files in that module.
 
 ### Pass 1 — Architecture
 - **Responsibility boundaries**: does each class/module do one thing? Flag classes that mix concerns (e.g. parsing + I/O + business logic in one unit)
@@ -121,18 +154,65 @@ To ensure consistent coverage regardless of code size or complexity, review each
 - **Python**: type annotations on public functions; f-strings over `.format()`; context managers for resources; no bare `except:`
 - **Shell**: quote all variable expansions; `set -euo pipefail`; no `[ ]` where `[[ ]]` works
 
+### Pass 6 — Test adequacy (audit the test suite, not just the code)
+
+The diff adds or changes behaviour; this pass asks **"what test proves each change, and what
+should be tested but isn't?"** Read the test files in the diff *and* the existing test files
+for the touched module. For every changed/added behaviour, run this checklist and file a
+finding for each gap (the fix block must give the concrete missing test — inputs and the
+assertion, not "add a test"):
+
+- **New behaviour / new code path** added by the MR (a new source, mode, counter, branch) →
+  is there a direct **isolation/regression test** that exercises *only* it? New behaviour with
+  no targeted test is **Major** (it is the part most likely to regress).
+- **Critical & sentinel branches** — degenerate/boundary inputs (`-inf`, `0`, empty,
+  `d <= 0`, overflow edge, the "already failing" path) → is each **directly** exercised,
+  *including the side effect it triggers* (e.g. a sentinel that bypasses a suppression must
+  have a test asserting the bypass)? The most numerically extreme branch is usually the least
+  tested — check it explicitly. Missing → **Major**.
+- **State-transition pairs** — if `X→Y` is tested, is the **reverse `Y→X`** tested? Latch/
+  release, suppress/unsuppress, arm/disarm, set/clear. A regression that *latches* a
+  suppressed state is a silent false-negative; only the reverse-transition test catches it.
+  Missing the reverse → **Major** when the latched state is safety-relevant, else **Medium**.
+- **Counter / flag isolation** — when several counters or flags coexist, is there a test
+  asserting that the **correct one moves and the others stay zero**? This catches swapped-
+  increment regressions. Missing → **Medium**.
+- **Coverage claims vs reality** — any docstring, rubric/`Rn` table, test-class description,
+  or comment that *claims* a scenario is covered → `grep` for the implementing test. A claim
+  with no test is a finding: implement the test **or** delete the claim. Missing → **Medium**.
+
+### Pass 7 — Observability & operability (can the field diagnose and tune this?)
+
+A correct algorithm that emits nothing useful cannot be tuned or debugged after deployment.
+Check that the change can be operated:
+
+- **Event-edge symmetry** — if a state's **onset** is logged or published, its **clearance /
+  falling edge** must be too, carrying *why it cleared* and the *final state* needed to tune
+  it (e.g. FCW logs the rising edge but not the clear → post-hoc analysis can't tell how long
+  it held or what cleared it). Asymmetric event logging is **Medium**.
+- **Diagnosability of new tunables** — new thresholds / debounce / suppression logic should
+  emit the values an operator needs to tune them post-hoc. Silent tunables are **Medium**.
+- **Config / env side-effects across process boundaries** — a config or env-var **default that
+  overwrites inherited state** is a defect: e.g. `LOGPRINT` defaulting to `WARNING` and calling
+  `setLevel(WARNING)` when unset silently downgrades a child process that inherited `DEBUG`.
+  Defaults must be **opt-in** (early-return / leave inherited state untouched when unset), not
+  state-mutating. **Major** when it suppresses diagnostics or changes behaviour silently.
 
 ### Coverage table (required after each file)
 
-After completing all five passes on a file, append a one-line coverage table to the review document:
+After completing all seven passes on a file, append a one-line coverage table to the review document:
 
 ```
-| File | Pass 1 Architecture | Pass 2 Correctness | Pass 3 Safety | Pass 4 Performance | Pass 5 Idioms |
-|------|--------------------|---------------|--------------------|---------------|---------------------|
-| path/to/file.cc | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings |
+| File | P1 Architecture | P2 Correctness | P3 Safety | P4 Performance | P5 Idioms | P6 Test adequacy | P7 Observability |
+|------|-----------------|----------------|-----------|----------------|-----------|------------------|------------------|
+| path/to/file.cc | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings | ✓ N findings |
 ```
 
-Write `✓ clean` when a pass produced no findings. **Never leave a cell blank** — a blank means the pass was skipped, not that it was clean.
+Write `✓ clean` when a pass produced no findings. For a non-test source file, P6 records the
+test-adequacy verdict for *that file's* behaviour (is it covered by some test?); for a test
+file, P1–P5 may legitimately be `✓ clean` while P6 carries the real analysis. **Never leave a
+cell blank** — a blank means the pass was skipped, not that it was clean. A row with P6 or P7
+blank is an incomplete review and must not be delivered.
 
 ---
 
@@ -170,10 +250,19 @@ Every fix block is mandatory. A finding with no fix block is incomplete.
 
 | Severity | Criteria |
 |----------|----------|
-| **Critical** | Security vulnerabilities, data loss, crashes, correctness bugs that will trigger in normal use |
-| **Major** | Blocking issues that must be fixed before merge: logic errors, broken contracts, missing error handling at boundaries |
-| **Medium** | Non-blocking issues worth fixing: suboptimal patterns, missing tests, style violations that affect readability |
+| **Critical** | Security vulnerabilities, data loss, crashes, correctness bugs that will trigger in normal use, **or a latent false-negative / silent failure in a safety, alerting, watchdog, or fail-safe function** (code that fails to act when it must) |
+| **Major** | Blocking issues that must be fixed before merge: logic errors, broken contracts, missing error handling at boundaries, **a missing test for a critical/sentinel branch or a safety-relevant state transition**, **a requirement (`Rn`) with no satisfying code path** |
+| **Medium** | Non-blocking issues worth fixing: suboptimal patterns, missing tests for ordinary behaviour, missing/asymmetric diagnostic logging, a coverage claim with no implementing test, style violations that affect readability |
 | **Minor** | Nits: naming, formatting, comment clarity — won't cause defects |
+
+**Safety / fail-safe severity calibration (read before grading).** Grade by the *consequence
+of the failure mode*, not by whether the happy path works. When code whose job is to **act on
+a condition** (fire a warning, trip a watchdog, arm a guard, brake) can reach a state where it
+**fails to act** on a real instance of that condition, that is **Critical** — "fails to act
+when required" ranks with "acts wrongly", even with no crash or data loss. **Never down-grade
+such a finding to Medium because it only manifests on an edge or cut-in path — the edge path
+is the safety case.** (In MR!202 the reviewer graded a reachable FCW false-negative *High*;
+the wf pass graded the same finding *Medium*. That under-grade is the failure this rule fixes.)
 
 ---
 
@@ -211,11 +300,38 @@ For each changed file, detect the language and load the matching skill:
 
 ### Step 4 — Review the diff
 
-For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Findings must be about changed lines, but **read enough surrounding and caller context to judge each change correctly** — a changed block is reviewed in the context of the unchanged code that calls it and that it calls (see Evidence and verification discipline #1). Flag each violation with its rule code; append the coverage table row after each file.
+First, for each module the diff touches, emit its **Pass 0 — Module comprehension** "Module map" (see **Structured review passes**). Do not begin the per-file passes for a module until its Module map is written. Then, for each changed file, run all seven passes (Architecture → Correctness → Safety → Performance → Idioms → Test adequacy → Observability). Findings must be about changed lines, but **read enough surrounding and caller context to judge each change correctly** — a changed block is reviewed in the context of the unchanged code that calls it and that it calls (see Evidence and verification discipline #1), and against its module's phase/timing map (Pass 0). Flag each violation with its rule code; append the seven-column coverage table row after each file.
 
 **Writing the report file is mandatory and is not optional on any run.** Write findings into `## Review` of `<project>-mr-<id>_review.md`. If the file already exists from a prior run, **overwrite it** with the current run's results — never skip writing because a file is present, and never deliver findings only in the chat response. The chat summary is in addition to the file, not a substitute for it.
 
 **Traceability cross-check**: for every fix the MR description or linked issue claims (e.g. "fixed #319"), confirm the change is present in `git diff origin/master...HEAD` (discipline rule #2). Record any claimed-but-absent fix as a Major finding.
+
+#### Requirements traceability (mandatory when the project has a spec/definition doc)
+
+If the touched module is governed by a spec/definition doc with **numbered requirements** (a
+rubric `R1–Rn`, ISO clauses, an acceptance list — e.g. `docs/fcw-definition.md`), do a
+dedicated traceability sweep *before* writing the verdict. Read that doc, then for **each
+requirement** build one row:
+
+```
+| Req | Satisfying code path (file:line) | Test (file:line) | Verdict |
+|-----|----------------------------------|------------------|---------|
+| R2.1 cut-in | fcw_estimate.py:301 (arm window) | — none — | FALSE-NEGATIVE: out-of-corridor lead never arms Source C → Critical |
+```
+
+- **No satisfying code path, or a path with a reachable false-negative** → **Critical/Major**
+  per the safety calibration above. This is the single highest-value class of finding and the
+  one a per-line pass misses — you only catch it by walking the requirement *down* into the
+  code, not the code up to a requirement.
+- **Code path exists but no test** → **Medium** (a `Medium` if ordinary, `Major` if the
+  requirement is safety-relevant; see Pass 6).
+- **Spec/definition doc completeness** — while reading the doc, flag any requirement that
+  **references a parameter, threshold, or term without giving its concrete value/definition**
+  where the doc's own purpose is to define it (e.g. a clause that mentions `v_min` / `margin`
+  but never specifies them). An under-specified requirement cannot be tested or verified →
+  **Medium**.
+
+Write the requirements-traceability table into the report file alongside the findings.
 
 ---
 
@@ -236,6 +352,8 @@ After presenting the review, ask: **"Shall I post these review findings to the M
 
 Post only the **findings** (severity-grouped comments). Do not post summary text, production-readiness verdicts, or informational context — only actionable findings that belong as inline or general MR comments.
 
+**Every posted finding MUST include its suggested fix.** Each comment carries two parts: (1) the finding statement (what is wrong and why), and (2) the corresponding **fix block from the review file**, reproduced verbatim — the concrete `Fix #N` code/snippet, not a paraphrase. A finding posted without its fix block is incomplete; do not post it bare. Prefer **inline** comments anchored to the file/line (`upload_review_comment.py --inline-file <path> --new-line <N>`) so each becomes a resolvable thread, falling back to a general comment only when no diff line applies. If you re-post a finding (e.g. a first post omitted the fix), delete the prior bare note first so the thread is not duplicated.
+
 If the user wants to select a subset, ask which specific comments to upload. Only post after explicit confirmation. Never post automatically.
 
 ---
@@ -244,7 +362,7 @@ If the user wants to select a subset, ask which specific comments to upload. Onl
 
 ### Step 1 — Load project context and language skill
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and apply all guidance from `# Technical note`. If the file does not exist, skip this step.
+Apply the **Technical note constraints provided in your task context** (the skill forwards the relevant subsection; it is the single source). If they are absent, skip this step — do not read the must_read file yourself.
 
 Detect the language and load the matching skill:
 - **C++ / `.cc` / `.h`** → `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`
@@ -257,7 +375,7 @@ If ambiguous, ask before proceeding.
 
 ### Step 2 — Review the changes
 
-For each changed file, run all five passes (Architecture → Correctness → Safety → Performance → Idioms) per **Structured review passes**. Flag each violation with its rule code and a concrete fix. Append the coverage table row after each file.
+First emit the **Pass 0 — Module comprehension** "Module map" for each touched module (see **Structured review passes**). Then, for each changed file, run all seven passes (Architecture → Correctness → Safety → Performance → Idioms → Test adequacy → Observability). Flag each violation with its rule code and a concrete fix. Append the seven-column coverage table row after each file. If the module is governed by a numbered-requirement spec doc, also do the **Requirements traceability** sweep described in the MR workflow.
 
 ---
 

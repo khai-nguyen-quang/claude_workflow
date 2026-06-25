@@ -1,11 +1,13 @@
 # planning — Phase 1 [superpowers:brainstorming → wf-planner]
 
 Planning runs in two steps: an inline **brainstorming** step in the main session that turns
-the ticket into an approved design spec, then the **wf-planner** agent that turns that spec
-into the formal strategy + design documents.
+the ticket into an approved design spec (the high-level approach — it replaces the old
+strategy document), then the **wf-planner** agent that turns that spec into the formal
+design document.
 
-`<technical_note>` (the `Features` subsection) and `<state_context>` are already loaded by
-the skill's **Prepare context** step — hold them as project context throughout.
+`<technical_note>` (the `Features` subsection), `<setup_commands>` (the `# Setup instructions`
+block), and `<state_context>` are already loaded by the skill's **Prepare context** step — hold
+them as project context throughout.
 
 ## Step 1 — Brainstorming (inline)
 
@@ -43,10 +45,13 @@ Spawn an Agent with:
   ## Technical note — Features
   <technical_note>
 
+  ## Setup commands (from must_read — build / test / lint)
+  <setup_commands>
+
   ## Approved design spec (from brainstorming)
   Read $WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_brainstorm.md —
-  this is the approved intent/design; use it as the primary source for the strategy and
-  design documents.
+  this is the approved intent/high-level approach; use it as the primary source for the
+  design document.
 
   ## Task
   GitLab ref: <ref>
@@ -61,5 +66,6 @@ Spawn an Agent with:
   </if>
   ```
 
-`<technical_note>` is the `Features` subsection forwarded by Step 3 of the skill. The agent
-also reads `CLAUDE.md` via its Required reading, and the brainstorm spec via the prompt above.
+`<technical_note>` (Features) and `<setup_commands>` (Setup instructions) are forwarded by Step 3
+of the skill — the sole reader of must_read. The agent also reads `CLAUDE.md` via its Required
+reading, and the brainstorm spec via the prompt above.

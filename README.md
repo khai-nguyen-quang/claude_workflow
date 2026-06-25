@@ -10,7 +10,7 @@ The workflow spawns subagents, passing appropriate context to perform heavy task
 
 The workflow supports the following phases:
 ```
-  planning      Phase 1 — strategy + design document
+  planning      Phase 1 — brainstorm + design document
   plan-review   Phase 2 — review design docs for conflicts
   coding        Phase 3 — implement the approved design
   test          Phase 4 — write unit and integration tests

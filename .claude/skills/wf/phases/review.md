@@ -22,6 +22,9 @@ Spawn an Agent with:
   ## Technical note — Features
   <technical_note>
 
+  ## Setup commands (from must_read — build / test / lint)
+  <setup_commands>
+
   ## Task
   GitLab ref: <ref>
   WORKSPACE_ROOT: $WORKSPACE_ROOT
@@ -43,5 +46,10 @@ Spawn an Agent with:
   </if>
   ```
 
-`<technical_note>` is the `Features` subsection forwarded by Step 3. The agent also reads `CLAUDE.md` via its Required reading.
+`<technical_note>` (Features) and `<setup_commands>` (Setup instructions) are forwarded by Step 3 — the sole reader of must_read. The agent also reads `CLAUDE.md` via its Required reading.
 `<mr_summary>` / `<mr_implementation>` stay injected — dynamic MR data the parent fetches with GitLab tools.
+
+**Posting findings (when the user asks to post the review to the MR):** follow
+`instructions/review.md` → **Step 6 — Upload findings to MR** exactly — it is the single source
+for the posting rule (verbatim fix block per finding, inline-anchored resolvable threads, delete
+prior bare notes before re-posting).
