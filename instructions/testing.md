@@ -2,13 +2,17 @@
 
 ## Goal
 
-Write unit and integration tests for the code changes produced in the Coding phase. All tests must pass before the phase is complete.
+Write unit and integration tests for the code changes produced in the Coding phase. All tests must pass before the phase is complete. This serves both a **GitLab issue** and a **free-form** run identically — it operates on the working-tree changes regardless of source.
 
 ## Inputs (from task context)
 
-- `<project>` — GitLab project name (e.g. `projectX`)
-- `<id>` — GitLab issue number
+- `<work_slug>` — canonical run identifier, derived from `<ref>`: `<project>-<id>` for a GitLab issue, or the free-form slug otherwise (the same slug the coding phase used). State lives under `.tmp/<work_slug>/`.
+- `<project>` — GitLab project name (e.g. `projectX`); may be `(unknown)` for a free-form slug.
+- `<id>` — GitLab issue number; empty for a free-form request.
 - `WORKSPACE_ROOT` — absolute path to the workspace root
+- `REPO_ROOT` — absolute path to the checkout to work in: the ticket's own worktree
+  (`$WORKSPACE_ROOT/<project>-worktree/<slug>`) for a GitLab issue or MR, otherwise
+  `$WORKSPACE_ROOT/<project>`. Never operate on a different checkout.
 - Code changes from Phase 3 (Coding)
 - `<state_context>` — content of `_state.md` if resuming (may be absent)
 
@@ -18,27 +22,29 @@ Write unit and integration tests for the code changes produced in the Coding pha
 
 ### Step 1 — Load project context
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`. Extract and store:
+Use the two blocks the skill forwarded in your task context — `## Setup commands` and
+`## Technical note` — and do not read the must_read file yourself; if a block is `(not available)`,
+note the gap and proceed. Extract and store:
 
-- **Test commands**:
+- **Test commands** (from `## Setup commands`):
   - Run all unit tests → `## Run unit tests` → `<unit_tests_all>`
   - Run a single unit test file → `## Run unit tests` → `<unit_tests_file>`
   - Run all integration tests → `## Run integration tests` → `<itest_all>`
   - Run a single integration test → `## Run integration tests` → `<itest_file>`
 
-- **Unit test framework** → `# Technical note` → `## Unit test framework (if any)`:
+- **Unit test framework** (from `## Technical note`) → `## Unit test framework (if any)`:
   - Framework name (e.g. Catch2, GoogleTest, pytest)
   - Test file naming pattern (e.g. `<module>/tests/test_<name>.cc`)
   - Build system registration step (e.g. `env.UnitTest()` in SConscript)
 
-- **Integration test framework** → `# Technical note` → `## Integration test framework (if any)`:
+- **Integration test framework** (from `## Technical note`) → `## Integration test framework (if any)`:
   - Framework name (e.g. pytest)
   - Test file naming pattern (e.g. `<module>/tests/test_<name>_docker.py`)
   - Required environment or infrastructure (e.g. Docker, mock hardware, specific fixtures)
 
-- **Other constraints** → `# Technical note` → `## Others`
+- **Other constraints** (from `## Technical note`) → `## Others`
 
-If the file does not exist, fall back to `$WORKSPACE_ROOT/<project>/CLAUDE.md` or `README.md`.
+If the file does not exist, fall back to `$REPO_ROOT/CLAUDE.md` or `README.md`.
 
 ---
 
@@ -110,4 +116,4 @@ Proceed to Phase 5: Code quality assurance.
 
 - Unit test source files (per naming convention in `## Unit test framework`)
 - Integration test source files (per naming convention in `## Integration test framework`)
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md` — updated after tests pass
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_state.md` — updated after tests pass

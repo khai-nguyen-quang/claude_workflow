@@ -73,12 +73,12 @@ This repo contains a multi-project Claude Code workflow for GitLab-based develop
 Include this workflow in any project by adding to that project's CLAUDE.md:
 
 ```
-@path/to/claude_workflow/workflow.md
+@path/to/claude_workflow/template/workflow.md
 ```
 
 ## Workflow overview
 
-See `workflow.md` for the full phase-by-phase workflow (Planning → Planning Review → Coding → Write Tests → Code QA → Review).
+See `template/workflow.md` for the full phase-by-phase workflow (Planning → Planning Review → Coding → Write Tests → Code QA → Review).
 
 ## Instructions
 

@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 # Create and checkout a new git branch for a GitLab ticket.
-# Branch name convention: feature/<slug>-<ticket-id>
+# Branch name convention: feature/<slug>-<ticket-id> or bug/<slug>-<ticket-id>
 #
 # Usage:
-#   create_branch.sh <ticket-ref> [--name <branch-name>] [--type <feature|fix|chore>]
+#   create_branch.sh <ticket-ref> [--name <branch-name>] [--type <feature|bug>]
 #
 # Examples:
 #   create_branch.sh projectX#309
 #   create_branch.sh projectX#309 --name metadrive-simulation
-#   create_branch.sh projectX#309 --type fix
+#   create_branch.sh projectX#309 --type bug
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 
 # shellcheck source=claude_workflow/tools/gitlab/_env.sh
 source "${SCRIPT_DIR}/../_env.sh"
+# shellcheck source=claude_workflow/tools/gitlab/_repo.sh
+source "${SCRIPT_DIR}/../_repo.sh"
 
 _show_help() {
   cat << 'EOF'
@@ -31,25 +33,35 @@ Arguments:
 Options:
   --name <slug>      Custom slug for the branch name (spaces → hyphens).
                      If omitted, the ticket title is fetched and slugified.
-  --type <type>      Branch prefix: feature, fix, or chore. Default: feature.
+  --type <type>      Branch prefix: feature or bug. Default: feature.
   --no-checkout      Create the branch without switching to it.
+  --repo <path>      Repository to operate on. Defaults to $WF_REPO, else the
+                     repo of the current directory, else the sole repo under the
+                     workspace.
   --help, -h         Show this help.
+
+Note: when a ticket has its own worktree (tools/git/worktree.sh, which the /wf
+skill runs automatically), the branch is created with the worktree and this
+script is not needed. Use it for standalone / free-form branch creation.
 
 Examples:
   create_branch.sh projectX#309
   create_branch.sh projectX#309 --name metadrive-sim --type feature
+  create_branch.sh projectX#309 --type bug
   create_branch.sh projectX#309 --no-checkout
 EOF
 }
 
 ticket_ref=""
 branch_slug=""
+repo_opt=""
 branch_type="feature"
 checkout=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --name)        branch_slug="$2"; shift 2 ;;
+    --repo)        repo_opt="$2"; shift 2 ;;
     --type)        branch_type="$2"; shift 2 ;;
     --no-checkout) checkout=false; shift ;;
     --help|-h)     _show_help; exit 0 ;;
@@ -68,8 +80,8 @@ if [[ -z "${ticket_ref}" ]]; then
 fi
 
 case "${branch_type}" in
-  feature|fix|chore) ;;
-  *) echo "Error: --type must be feature, fix, or chore (got '${branch_type}')" >&2; exit 1 ;;
+  feature|bug) ;;
+  *) echo "Error: --type must be feature or bug (got '${branch_type}')" >&2; exit 1 ;;
 esac
 
 # Resolve the ref to get project + iid
@@ -82,6 +94,16 @@ if [[ "${kind}" != "issue" ]]; then
   echo "Error: '${ticket_ref}' is a merge request, not an issue." >&2
   exit 1
 fi
+
+# The project repo lives in a subdirectory of the workspace (e.g.
+# $WORKSPACE_ROOT/openpilot), and a ticket may instead be worked on in its own
+# worktree -- resolve_repo_root honours --repo / WF_REPO / the current directory
+# before falling back to that default.
+project_name="${project_path##*/}"
+if [[ -z "${repo_opt}" && -z "${WF_REPO:-}" ]] && ! git -C "${PWD}" rev-parse --git-dir &>/dev/null; then
+  repo_opt="${WORKSPACE_ROOT}/${project_name}"
+fi
+REPO_ROOT="$(resolve_repo_root "${WORKSPACE_ROOT}" "${repo_opt}")"
 
 # Fetch ticket title if no slug given
 if [[ -z "${branch_slug}" ]]; then

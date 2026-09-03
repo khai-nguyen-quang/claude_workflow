@@ -9,7 +9,8 @@ Investigate a reported bug. Produce a root cause analysis (RCA) document with a 
 - `<bug_description>` — full bug report text (from GitLab or user prompt)
 - `<debug_folder>` — working directory for all output files
 - `<debug_prefix>` — file-name prefix (e.g. `projectX-123` or `fcw_not_alert`)
-- `<technical_note>` — `# Technical note` section from `<project>_must_read.md` (may be absent)
+- `<technical_note>` — `# Technical note` section, forwarded by the skill — the single reader of must_read (may be absent; do not read must_read yourself)
+- `<setup_commands>` — `# Setup instructions` (build / test commands), forwarded by the skill (may be absent)
 - `<project_context>` — project CLAUDE.md content (may be absent)
 - `<module_doc_paths>` — list of relevant module documentation file paths to read
 - `<debug_state>` — previous state file content (present only when resuming)

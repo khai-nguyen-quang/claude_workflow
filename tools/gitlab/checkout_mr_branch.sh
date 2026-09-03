@@ -14,6 +14,8 @@ WORKSPACE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # shellcheck source=claude_workflow/tools/gitlab/_env.sh
 source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
+# shellcheck source=claude_workflow/tools/gitlab/_repo.sh
+source "$(dirname "${BASH_SOURCE[0]}")/_repo.sh"
 
 _show_help() {
   cat << 'EOF'
@@ -27,7 +29,14 @@ Arguments:
 Options:
   --remote <name>  Git remote to fetch from. Defaults to "origin".
   --no-switch      Fetch the branch without switching to it.
+  --repo <path>    Repository to operate on. Defaults to $WF_REPO, else the repo
+                   of the current directory, else $WORKSPACE_ROOT/<project>.
   --help, -h       Show this help.
+
+Note: the /wf skill gives each MR its own worktree already checked out on the
+source branch (tools/git/worktree.sh), and sets WF_REPO to it -- this script
+then only fetches and fast-forwards. Use it standalone to check an MR branch out
+into an existing checkout.
 
 Examples:
   checkout_mr_branch.sh projectX#MR!177
@@ -38,11 +47,13 @@ EOF
 
 mr_ref=""
 remote="origin"
+repo_opt=""
 do_switch=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --remote)    remote="$2"; shift 2 ;;
+    --repo)      repo_opt="$2"; shift 2 ;;
     --no-switch) do_switch=false; shift ;;
     --help|-h)   _show_help; exit 0 ;;
     --*)         echo "Error: unknown flag '$1'" >&2; _show_help; exit 1 ;;
@@ -95,14 +106,13 @@ echo "Branch: ${source_branch}  →  ${target_branch}"
 echo ""
 
 project_name="$(basename "${project_path}")"
-REPO_ROOT="${WORKSPACE_ROOT}/${project_name}"
-
-if [[ ! -d "${REPO_ROOT}/.git" ]]; then
-  echo "Error: local repo not found at '${REPO_ROOT}'." >&2
-  exit 1
+if [[ -z "${repo_opt}" && -z "${WF_REPO:-}" ]] && ! git -C "${PWD}" rev-parse --git-dir &>/dev/null; then
+  repo_opt="${WORKSPACE_ROOT}/${project_name}"
 fi
+REPO_ROOT="$(resolve_repo_root "${WORKSPACE_ROOT}" "${repo_opt}")"
 
 cd "${REPO_ROOT}"
+echo "Repo:   ${REPO_ROOT}"
 
 # Fetch the branch from remote
 echo "Fetching ${remote}/${source_branch}..."

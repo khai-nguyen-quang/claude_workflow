@@ -158,6 +158,29 @@ def api_post(endpoint: str, token: str, payload: dict) -> dict:
         sys.exit(1)
 
 
+def api_put(endpoint: str, token: str, payload: dict) -> dict:
+    """Authenticated PUT to the GitLab v4 API. Returns parsed JSON."""
+    url = f"{GITLAB_URL}/api/v4{endpoint}"
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"PRIVATE-TOKEN": token, "Content-Type": "application/json"},
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode(errors="replace")
+        print(f"Error: GitLab API {exc.code} for PUT {url}", file=sys.stderr)
+        print(f"  {body}", file=sys.stderr)
+        sys.exit(1)
+    except urllib.error.URLError as exc:
+        print(f"Error: cannot reach {url}: {exc.reason}", file=sys.stderr)
+        sys.exit(1)
+
+
 def api_get_paged(endpoint: str, token: str, params: dict | None = None) -> list:
     """Fetch all pages from a paginated GitLab endpoint."""
     results = []

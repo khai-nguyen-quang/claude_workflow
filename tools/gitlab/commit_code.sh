@@ -12,7 +12,10 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+# shellcheck source=claude_workflow/tools/gitlab/_repo.sh
+source "${SCRIPT_DIR}/_repo.sh"
 
 _show_help() {
   cat << 'EOF'
@@ -22,10 +25,12 @@ Usage: commit_code.sh [--all] <message> [file ...]
 Commits and pushes code to the current branch's remote.
 
 Options:
-  --all        Stage all changes (git add -A) before committing.
-  --dry-run    Show what would happen without actually committing or pushing.
-  --no-push    Commit but do not push.
-  --help, -h   Show this help.
+  --all          Stage all changes (git add -A) before committing.
+  --repo <path>  Repository to operate on. Defaults to $WF_REPO, else the repo of
+                 the current directory, else the sole repo under the workspace.
+  --dry-run      Show what would happen without actually committing or pushing.
+  --no-push      Commit but do not push.
+  --help, -h     Show this help.
 
 Arguments:
   message      Commit message (required).
@@ -42,12 +47,14 @@ EOF
 add_all=false
 dry_run=false
 no_push=false
+repo_opt=""
 message=""
 files=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)      add_all=true; shift ;;
+    --repo)     repo_opt="$2"; shift 2 ;;
     --dry-run)  dry_run=true; shift ;;
     --no-push)  no_push=true; shift ;;
     --help|-h)  _show_help; exit 0 ;;
@@ -68,6 +75,24 @@ if [[ -z "${message}" ]]; then
   exit 1
 fi
 
+# Enforce the no-attribution rule: a commit message must never carry a
+# `Co-Authored-By:` trailer crediting Claude/Anthropic (or any Anthropic
+# noreply address). Strip such lines rather than failing, so the rule holds
+# even if a caller passes one in. See claude_workflow/instructions/gitlab.md.
+_attr_re='^[[:space:]]*Co-Authored-By:.*(Claude|Anthropic|noreply@anthropic\.com)'
+if printf '%s\n' "${message}" | grep -qiE "${_attr_re}"; then
+  echo "Warning: stripping Claude/Anthropic 'Co-Authored-By:' trailer from commit message." >&2
+  # Command substitution strips trailing newlines, so the blank separator left
+  # before a trailing trailer is removed automatically.
+  message="$(printf '%s\n' "${message}" | grep -viE "${_attr_re}" || true)"
+fi
+
+if [[ -z "${message//[[:space:]]/}" ]]; then
+  echo "Error: commit message is empty after stripping attribution trailers." >&2
+  exit 1
+fi
+
+REPO_ROOT="$(resolve_repo_root "${WORKSPACE_ROOT}" "${repo_opt}")"
 cd "${REPO_ROOT}"
 
 branch="$(git rev-parse --abbrev-ref HEAD)"

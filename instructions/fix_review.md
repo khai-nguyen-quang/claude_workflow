@@ -8,23 +8,35 @@ Fix code based on review findings. Two sources are supported: online (GitLab MR 
 
 ## Prerequisites (complete before any step)
 
-Derive `<project>` from the GitLab ref in your task context (the part before `#`).
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md`.
-Apply every constraint in its `# Technical note` section throughout the entire fix.
-**Do not proceed to any step below until this file is read.**
+This single workflow fixes review findings from either source; the GitLab steps are gated
+**(online / MR only)**. The variant is `<work_source>`:
+- **Online** — `<ref>` is a GitLab MR (e.g. `projectX#MR!186`): fetch live comments from the MR.
+- **Offline** — `<ref>` is an issue/free-form ref, or none: read the review file already on disk.
+
+`<work_slug>` is the `.tmp/` key for the artifacts this phase reads/writes: `<project>-<id>` for an
+issue ref, the free-form slug for a free-form ref, or `<project>-mr-<id>` for an MR. `<project>` may
+be `(unknown)` for a free-form slug.
+
+Apply the **`## Technical note` constraints provided in your task context** throughout the entire
+fix — the skill forwards them (and the `## Setup commands` block) and is the single source. If
+absent or `(not available)`, note the gap and continue; do not read the must_read file yourself.
+**Do not proceed to any step below until these constraints are loaded.**
 
 ---
 
 ## Step 1 — Determine review source
 
-| Input | Source |
+Pick the branch by ref; the GitLab steps in the online branch are gated to MR refs. Then run
+**Step 2 onward (shared)** identically for both.
+
+| Input | Branch |
 |---|---|
-| A GitLab MR ref (e.g. `projectX#MR!186`) | **Online** — fetch comments from GitLab |
-| A project/issue ref (e.g. `projectX#186`) or no ref | **Offline** — read local review file |
+| A GitLab MR ref (e.g. `projectX#MR!186`) | **Online (MR only)** — fetch live comments from GitLab |
+| An issue / free-form ref, or no ref | **Offline** — read the review file on disk |
 
 ---
 
-## Online workflow
+## Online branch (GitLab MR only)
 
 ### Step 1.O — Fetch MR comments
 
@@ -81,12 +93,12 @@ Organise open items by severity: Critical → Major → Medium → Minor. If a c
 
 ---
 
-## Offline workflow
+## Offline branch (review file on disk)
 
 ### Step 1.F — Locate review file
 
 Look for the review file at:
-- Issue: `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_review.md`
+- Issue / free-form: `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_review.md`
 - MR: `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-mr-<id>/<project>-mr-<id>_review.md`
 
 If no file is found, stop and ask the user to provide the path.
@@ -99,11 +111,12 @@ Read the review file. Extract all findings that have a `Fix:` block. Group by se
 
 ## Step 2 — Load project context and language skills
 
-Read `$WORKSPACE_ROOT/claude_workflow/projects/<project>_must_read.md` and extract:
+From the `## Setup commands` block forwarded in your task context (do not read the must_read file
+yourself), extract:
 - `<compile_cmd>` for build verification
 - `<unit_tests_all>` for test verification
 
-If the file does not exist, fall back to the project's `CLAUDE.md`.
+If the block is `(not available)`, fall back to the project's `CLAUDE.md`.
 
 For each finding, detect the language of the affected file and load the matching skill:
 - `.cc` / `.h` → `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`
@@ -136,6 +149,10 @@ After all fixes are applied:
 ---
 
 ## Step 5 — Present final summary and update tracking file
+
+**This summary is local only — for the chat response and the tracking file. It is never posted
+to the MR.** The tracking file exists so a later run can tell what was already fixed (Step 2.O
+reads it); it is not a comment draft.
 
 **The resolution file MUST use the exact table format shown below. No prose narrative, no per-item sub-sections, no extra headings — tables only.**
 
@@ -177,14 +194,60 @@ Use `Skipped` with a reason for any finding intentionally not fixed (pre-existin
 
 ---
 
-## Step 6 — Ask before posting (online only)
+## Step 6 — Ask before replying (online only)
 
 For the online workflow: after presenting the fix summary, ask:
-**"Shall I post a resolution comment to MR `<ref>`?"**
+**"Shall I reply to the review threads on MR `<ref>`?"**
 
-Only if the user confirms, post a summary comment using:
+Never post automatically. **Only if the user confirms** — or when the user asks directly
+("post resolution comment", "reply to the review") — carry out the two parts below.
+
+**Reply in the threads and resolve them. Post nothing else.** No standalone summary comment,
+no "Fix review complete" note, no table of fixes, no per-file walkthrough — those belong in
+the tracking file from Step 5 and nowhere on the MR. The reviewer reads their own threads; a
+general comment restating what the replies already say is noise on their MR.
+
+### 6a — Reply to every thread
+
+Every thread that this phase addressed gets its own reply.
+
+List the threads and their ids:
 ```bash
-$WORKSPACE_ROOT/claude_workflow/tools/gitlab/upload_review_comment.py <ref> --file <resolution_summary.md>
+$WORKSPACE_ROOT/claude_workflow/tools/gitlab/reply_and_resolve.py <ref> --list
 ```
 
-Never post automatically.
+Build a plan file — one entry per thread, `body` naming **what changed and in which commit**,
+one or two sentences, no analysis:
+```json
+[
+  {"discussion_id": "<id>", "body": "Fixed in `<sha>`. <what changed>.", "resolve": true},
+  {"discussion_id": "<id>", "body": "Not changed — <reason>.",           "resolve": false}
+]
+```
+
+Check it before it goes out, then apply:
+```bash
+$WORKSPACE_ROOT/claude_workflow/tools/gitlab/reply_and_resolve.py <ref> --plan <plan.json> --dry-run
+$WORKSPACE_ROOT/claude_workflow/tools/gitlab/reply_and_resolve.py <ref> --plan <plan.json>
+```
+
+### 6b — Resolve what is fixed
+
+`"resolve": true` for every thread whose finding is **Fixed**, and only those. A **Skipped**
+finding gets a reply explaining why, and stays open — the reviewer decides whether to accept
+it. Never resolve a thread whose fix is not actually on the MR's branch.
+
+### Before replying, verify
+
+- The fixes are **on the remote branch the MR shows**, not just in the local tree. Compare
+  `git diff <remote-tip> HEAD` — a rebase makes SHAs differ while trees match, which is fine;
+  a non-empty diff means something is unpushed and the reply would be false.
+- The resolution file carries no stale status line (e.g. "changes are in the working tree,
+  not committed") left over from an earlier run.
+- No bare `#<number>` anywhere in a body — GitLab autolinks it to an unrelated issue. Refer to
+  findings by severity and file, and to commits by SHA.
+
+### Report back
+
+State the count of threads replied to and the count resolved. Then re-run `--list` and confirm
+the open/resolved tally matches what you intended.

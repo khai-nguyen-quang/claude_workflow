@@ -69,17 +69,35 @@ cd <project>
 ---
 
 <span style="color:red">***User puts project specific info from here***</span>
+
 # Technical note
 
-## Unit test (if any)
-<unit_test_framework>
+> Single source of binding constraints. The `/wf` skill forwards one subsection to each
+> agent: **Features** → planning / plan-review / review; **Coding and Testing** → coding /
+> test / lint / fix_review; debug reads the whole note. Keep the heading names exactly so
+> the forwarder can find them. Put every must-honor rule under the matching subsection.
 
+## Features
+<!-- For planning & review agents: product/domain behavior and feature constraints that
+     decide WHAT to build — e.g. nuisance-alert rules, safety behaviors, UX requirements. -->
+1.
 
-## Integration test (if any)
-<itest_framework>
+2.
+
+## Coding and Testing
+<!-- For coding & testing agents: the rules for HOW to build and verify. Examples:
+     - All build/test/lint go through `./dev.sh` (never call scons/pytest/clang-tidy directly).
+     - Language standard / toolchain (e.g. C++20, Clang 14).
+     - Build artifacts location (e.g. build/<arch>/<config>/ via VariantDir — never in source tree).
+     - Lint policy (e.g. never `lint --all`; lint changed files explicitly).
+     - Unit test framework: <unit_test_framework>
+     - Integration test framework: <itest_framework> -->
+1.
+
+2.
 
 ## Others
+<!-- Anything not covered above; read by all agents. -->
+1.
 
-1. 
-
-2. 
+2.
