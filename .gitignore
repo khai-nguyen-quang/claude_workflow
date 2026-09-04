@@ -5,3 +5,5 @@ __pycache__/
 *_must_read.md
 !projects/template_must_read.md
 
+*_worktree.conf
+!projects/template_worktree.conf

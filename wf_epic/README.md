@@ -11,104 +11,142 @@ merged code in four phases.
 /wf-epic status         Epic#60    the queue
 ```
 
-**Phases 1–3 are joins** — N agents work independently, one merges. Subagent fan-out.
-**Phase 4 is a stream** — tickets flow continuously, an agent that frees up pulls the next.
+## How it works
+
+One session per phase. Sessions share no context — **files are the only handoff.**
+
+```mermaid
+flowchart LR
+    E([Epic]) --> P1
+
+    P1["<b>1 · Research</b><br/>subagent fan-out<br/>3 lenses + consolidator"]
+    P2["<b>2 · Design</b><br/>subagent fan-out, looped<br/>1 warm author + 3 fresh reviewers"]
+    P3["<b>3 · Split</b><br/>solo, you confirm<br/>no agents"]
+    P4["<b>4 · Implementation</b><br/>AGENT TEAM<br/>coder ∥ reviewer ∥ fixer"]
+
+    P1 -->|_strategy.md| P2
+    P2 -->|_design.md| P3
+    P3 -->|tickets on the forge| P4
+    P4 --> MR([MRs / PRs])
+
+    classDef fan fill:#f4e6cc,stroke:#8f5b0e,color:#3a2a08;
+    classDef solo fill:#e8e8e4,stroke:#767c7f,color:#22262a;
+    classDef team fill:#cfe4e1,stroke:#0c6560,color:#062f2c;
+    class P1,P2 fan
+    class P3 solo
+    class P4 team
+```
+
+| Phase | Mechanism | Agents spawned | Loop | You are asked |
+|---|---|---|---|---|
+| 1 Research | subagent fan-out | `wf-web-researcher` ×1, `wf-planner` ×2 per project, `wf-consolidator` ×1 | no | only when lenses conflict |
+| 2 Design | subagent fan-out | `wf-planner` ×1 **warm**, `wf-reviewer` ×3 **fresh per round**, `wf-consolidator` ×1 per round | ≤3 rounds | on divergence or the cap |
+| 3 Split | solo | none | no | **always** — before anything reaches the forge |
+| 4 Implementation | **agent team** | teammates `coder`, `reviewer`, `fixer` | ≤2 rounds per ticket | on a blocked ticket |
+
+**Phases 1–3 are joins** — N agents work independently, one merges, everyone waits at the barrier.
+**Phase 4 is a stream** — tickets flow continuously and an agent that frees up pulls the next.
 Only an agent team can express a stream; that is the sole reason phase 4 uses one.
+
+### Phase 1 — three lenses, one message, no cross-talk
+
+```mermaid
+flowchart LR
+    E([Epic]) --> W["web<br/><i>wf-web-researcher</i>"]
+    E --> D["docs · per project<br/><i>wf-planner</i>"]
+    E --> C["code · per project<br/><i>wf-planner</i>"]
+    W --> K["consolidate<br/><i>wf-consolidator</i>"]
+    D --> K
+    C --> K
+    K --> S([_strategy.md])
+    K -.->|lenses disagree| H([you decide])
+```
+
+Every prompt carries the silence rule: *write your file and stop, talk to nobody.* Independence is
+the whole reason for having three. Disagreements are put to you with the evidence on each side —
+never averaged into a third answer nobody proposed.
+
+### Phase 2 — the freshness asymmetry
+
+```mermaid
+flowchart LR
+    S([_strategy.md]) --> A["author · <b>WARM</b><br/>one wf-planner, all rounds"]
+    A --> DR([_design_draft.md])
+    DR --> U["usecases"]
+    DR --> SC["scale"]
+    DR --> CO["corners"]
+    U --> K["consolidate"]
+    SC --> K
+    CO --> K
+    K -->|DESIGN OK| F([_design.md])
+    K -->|findings| L[(_design_decisions.md<br/>accepted / rejected + reason)]
+    L -->|next round| A
+
+    classDef fresh fill:#f4e6cc,stroke:#8f5b0e,color:#3a2a08;
+    class U,SC,CO fresh
+```
+
+**The author remembers; the reviewers forget.** The author is continued with `SendMessage` so it
+never undoes a deliberate decision while fixing an unrelated finding. The three reviewers (shaded)
+are new instances every round: a warm reviewer only checks "did they fix my list", a cold one
+re-reads the whole document and catches *what the fix just broke*. A document has no build or test,
+so the cold reviewer **is** the regression detector.
+
+The ledger is what terminates the loop — it is fed to each round as *"already considered, do not
+re-raise without new evidence."* The 3-round cap is only a backstop.
+
+### Phase 4 — the stream, and the hooks that drive it
+
+At any instant all three stages are running, on different tickets. The bottleneck is the coder, so
+the fixer is a separate agent: if the coder did its own fixes the overlap would buy nothing.
+
+```
+time ─────────────────────────────────────────────────▶
+coder      [ code:T1 ][ code:T2 ][ code:T3 ][ code:T4 ]
+reviewer             [ rev:T1 ]  [ rev:T2 ][ rev:T1.r2 ]
+fixer                       [ fix:T1 ]     [ fix:T2 ]
+```
+
+```mermaid
+flowchart LR
+    Q[(_queue.md<br/>source of truth)] --> TL["task list<br/>code: · review: · fix:"]
+    TL --> CO["<b>coder</b><br/>claims code:*<br/><i>wf-coder</i>"]
+    TL --> RE["<b>reviewer</b><br/>claims review:*<br/><i>persistent across every ticket</i>"]
+    TL --> FI["<b>fixer</b><br/>claims fix:*<br/><i>escalates design findings</i>"]
+    CO --> G
+    RE --> G
+    FI --> G
+    G["<b>TaskCompleted</b> — THE GATE<br/>build · test · lint · asan · tsan<br/>exit 2 rejects, agent gets the output"]
+    G --> Q
+    I["<b>TeammateIdle</b> — THE LOOP<br/>work in your lane → exit 2, claim it"]
+    I -.-> CO
+    I -.-> RE
+    I -.-> FI
+
+    classDef hook fill:#cfe4e1,stroke:#0c6560,color:#062f2c;
+    class G,I hook
+```
+
 
 ## Layout
 
 ```
 wf_epic/
-├── SKILL.md                  /wf-epic dispatcher       (symlinked into .claude/skills/)
-├── phases/1_research.md … 4_implementation.md          what Claude follows
-├── agents/wf-web-researcher.md, wf-consolidator.md     (symlinked into .claude/agents/)
-├── engine/graph.py           the task graph + queue file (source of truth)
-├── engine/gates.sh           gate commands, anchored to .gitlab-ci.yml's validate stage
-├── hooks/task_completed.sh   THE GATE   — exit 2 rejects and feeds back
-├── hooks/teammate_idle.sh    THE LOOP   — exit 2 keeps a teammate working
-├── hooks/_payload.py         payload extraction by shape, not by key name
-├── tools/fetch_epic.py       group-level epic + children
-├── tools/create_issue.py     create + link to epic (global id, verified)
-├── tools/seed_epic.py        epic -> worktrees -> queue
-└── settings.snippet.json     merge into .claude/settings.json
+├── SKILL.md            /wf-epic dispatcher, symlinked into .claude/skills/
+├── phases/1…4.md       what Claude follows, one file per phase
+├── agents/             wf-web-researcher, wf-consolidator (symlinked into .claude/agents/)
+├── engine/graph.py     the task graph; owns _queue.md
+├── engine/gates.sh     gate commands, anchored to .gitlab-ci.yml's validate stage
+├── hooks/              task_completed.sh (THE GATE), teammate_idle.sh (THE LOOP), _payload.py
+└── tools/              fetch_epic.py, create_issue.py, seed_epic.py
 ```
 
-## The engine
-
-The graph is **not stored as edges**. It is derived from an ordered ticket list plus each ticket's
-state, so the on-disk format stays small enough for you to read and edit:
-
-```
-pending -> coding -> review(r1) -+-> done
-                                 +-> fixing(r1) -> review(r2) -+-> done
-                                                               +-> blocked
-```
-
-`_queue.md` is the **source of truth**; the Claude Code task list is a projection of it. Team names
-are session-derived, so a fresh session starts with an empty task list — without the queue file the
-graph would be lost on every restart.
-
-**`done` and `blocked` are both terminal and both release WIP backpressure.** That is the entire
-purpose of `blocked`: the WIP edge (`code:T(n+2)` waits on `T(n)`) combined with an unbounded review
-loop would otherwise stall the coder forever and freeze the epic behind one bad ticket.
-
-```bash
-G="python3 wf_epic/engine/graph.py --queue .tmp/epic-116/epic-116_queue.md"
-$G status                                    # every ticket, blocked ones called out
-$G next                                      # tasks that should exist now (respects WIP)
-$G advance --ticket tvi-linux-56 --event review-findings --findings 3
-```
+The graph is **not stored as edges** — it is derived from an ordered ticket list plus each ticket's
+state, so `_queue.md` stays small enough for you to read and edit by hand.
 
 ## Setup
 
-1. Merge `settings.snippet.json` into `.claude/settings.json` (absolute paths in hook commands).
-2. Agents and the skill are already symlinked into `.claude/`.
-3. Phase 4 needs an **interactive** session — `claude -p` silently downgrades teammates to ordinary
-   subagents and you get no team at all.
+```
+claude_workflow/setup.sh
+```
 
-## Verified
-
-Run against `gitlab.cartrack.com` on 2026-09-03:
-
-- **`fetch_epic.py`** — works on the live instance. GitLab 19.3.1-ee, epics licensed, no deprecation
-  headers. `Epic#116` resolves to 7 children spanning **both** `openpilot` and `tvi-linux`, which is
-  what the cross-project scope rule is built on.
-- **`graph.py`** — full scenario: WIP holds at 2, a terminal ticket releases position 3, divergence
-  (`r1=5, r2=5`) blocks with a reason, illegal transitions are refused.
-- **`task_completed.sh`** — a missing review file exits 2 with feedback; a `NEEDS WORK` report with
-  3 findings advances to `fixing r1` counting 2 (blocking+major, minor excluded).
-- **`teammate_idle.sh`** — pushes the fixer back when its lane has work, allows the reviewer to idle
-  when it does not.
-- **`create_issue.py`** — dry run only. **No issue has been created.**
-
-## Not verified — read before trusting it
-
-- **Hook payload schema.** Hook JSON differs between Claude Code versions. `_payload.py` therefore
-  finds our task id and teammate name **by shape** (`^(code|review|fix):`, and the names
-  `coder`/`reviewer`/`fixer`) rather than by guessing key paths — a wrong key path fails silently,
-  and for `TaskCompleted` that means a gate that never runs. Confirm what your version sends:
-
-  ```bash
-  WF_EPIC_DEBUG=1 WF_EPIC_TMP=/tmp  # then inspect /tmp/hook_payload.json after a task completes
-  ```
-
-- **The gates have never run a real build.** `gates.sh` calls `./dev.sh build|test|lint|--asan|--tsan`
-  from `openpilot_must_read.md`, but no worktree has been built through this engine. A repo with no
-  `./dev.sh` is reported **SKIPPED, never passed**.
-- **No team has been run end to end.** The topology, prompts and hook contract are written; the
-  three teammates have not yet worked a real ticket.
-- **Restart is untested.** Kill a session mid-run and restart it deliberately before trusting the
-  pipeline unattended. If it does not recover cold, this is a session you cannot afford to lose
-  rather than an automated pipeline.
-- **Model IDs.** The two new agents pin `claude-opus-5` / `claude-sonnet-5`; the existing `wf-*`
-  agents still pin 4.x ids. Align them if you want one convention.
-
-## First run
-
-Order matters — the cheapest real signal first.
-
-1. **Dry-run the split against epic 116.** It already has 7 human-made tickets across both projects,
-   so you can diff the model's breakdown against one a human actually made, at no risk.
-2. **`create_issue.py` for real**, on one throwaway ticket, and check `epic_iid` reads back.
-3. **Phase 4 on the three `tvi-linux` tickets** — shake out the gates and the restart path before
-   pointing it at a full epic.
