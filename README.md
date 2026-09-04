@@ -69,7 +69,8 @@ Configure only the forge you use — the workflow tolerates the other being abse
 | `GL_URL` | GitLab | yes | instance base URL, e.g. `https://gitlab.company.com` |
 | `GL_NAMESPACE` | GitLab | yes | group prefixed to short refs, e.g. `mygroup/mysubgroup` |
 | `GL_USERNAME` | GitLab | no | reference only |
-| `GH_TOKEN` | GitHub | yes | personal access token |
+| `GH_FINEGRAINED_TOKEN` | GitHub | one of the two | fine-grained token; **preferred** when both are set |
+| `GH_TOKEN` | GitHub | one of the two | classic token; used as the fallback |
 | `GH_USERNAME` | GitHub | no | reference only |
 
 A **fine-grained** GitHub token lists its repositories explicitly. For each repo the workflow
@@ -77,7 +78,9 @@ needs **Issues: Read & write** (sub-issues live here), **Contents: Read & write*
 **Pull requests: Read & write**, **Metadata: Read**.
 
 > A 404 on a repo you can clone over SSH means the token's repository access does not include it.
-> SSH keys and token scopes are independent.
+> SSH keys and token scopes are independent. A fine-grained token scoped to **"Public
+> repositories"** cannot see a private repo at all — it must be listed under **"Only select
+> repositories"**.
 
 ### 3. Run setup
 

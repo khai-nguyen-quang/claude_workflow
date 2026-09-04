@@ -19,8 +19,12 @@ The GitLab vocabulary is kept for the shared names: **`fetch_mr_content.sh` and
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GH_TOKEN` | Yes | GitHub personal access token |
+| `GH_FINEGRAINED_TOKEN` | one of the two | Fine-grained personal access token. **Preferred** when both are set. |
+| `GH_TOKEN` | one of the two | Classic personal access token. Used as the fallback. |
 | `GH_USERNAME` | No | Your GitHub login, for reference only |
+
+`verify_access.sh` prints which variable supplied the token, because "the wrong
+token is in play" is the most common cause of an unexpected 404.
 
 There is no URL or namespace to configure: a GitHub ref always carries its own `owner/repo`.
 
@@ -35,7 +39,9 @@ workflow needs:
 | Metadata: Read | default branch, repository info |
 
 A 404 on a repository you can clone over SSH almost always means the token's repository access
-does not include it — SSH keys and PAT scopes are independent.
+does not include it — SSH keys and PAT scopes are independent. Note that a fine-grained token
+scoped to **"Public repositories"** cannot see a private repo no matter what permissions it
+carries: the repository has to be named under **"Only select repositories"**.
 
 # GitHub input format
 

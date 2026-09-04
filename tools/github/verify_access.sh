@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify that GH_TOKEN authenticates and can read a given repository.
+# Verify that the configured GitHub token authenticates and can read a repository.
 #
 # Usage: ./verify_access.sh [--repo <owner/repo>]
 #
@@ -16,7 +16,8 @@ _show_help() {
   cat << 'HELP'
 Usage: verify_access.sh [--repo <owner/repo>] [--help]
 
-Verifies GH_TOKEN can authenticate and read the target repository.
+Verifies the configured token can authenticate and read the target repository.
+Reports which .env variable supplied it.
 
 Options:
   --repo <owner/repo>  Repository to check. Without it, only authentication and
@@ -36,9 +37,9 @@ done
 
 echo "GitHub API: ${GITHUB_API}"
 
-user_json="$(api_get "/user")" || { echo "Error: authentication failed — check GH_TOKEN." >&2; exit 1; }
+user_json="$(api_get "/user")" || { echo "Error: authentication failed — check ${GH_TOKEN_SOURCE}." >&2; exit 1; }
 login="$(echo "${user_json}" | python3 -c "import json,sys; print(json.load(sys.stdin)['login'])")"
-echo "Authenticated as: ${login}"
+echo "Authenticated as: ${login}   (token from ${GH_TOKEN_SOURCE})"
 
 if [[ -z "${repo}" ]]; then
   echo ""

@@ -2,9 +2,9 @@
 # Shared environment for GitHub shell tools.
 # Source this file: source "$(dirname "${BASH_SOURCE[0]}")/_env.sh"
 #
-# Mirrors tools/gitlab/_env.sh. Only GH_TOKEN is required -- there is no
-# instance URL or namespace to configure, because a GitHub ref always carries
-# its own owner/repo.
+# Mirrors tools/gitlab/_env.sh. Only a token is required -- there is no instance
+# URL or namespace to configure, because a GitHub ref always carries its own
+# owner/repo. Tools read the resolved token as ${GH_API_TOKEN}.
 
 set -euo pipefail
 
@@ -21,8 +21,16 @@ set -a
 source "${ENV_FILE}"
 set +a
 
-if [[ -z "${GH_TOKEN:-}" ]]; then
-  echo "Error: GH_TOKEN not set in .env" >&2
+# A fine-grained token is preferred: its per-repository permissions are the ones
+# this workflow documents, while a classic token's scopes are account-wide.
+if [[ -n "${GH_FINEGRAINED_TOKEN:-}" ]]; then
+  GH_API_TOKEN="${GH_FINEGRAINED_TOKEN}"
+  GH_TOKEN_SOURCE="GH_FINEGRAINED_TOKEN"
+elif [[ -n "${GH_TOKEN:-}" ]]; then
+  GH_API_TOKEN="${GH_TOKEN}"
+  GH_TOKEN_SOURCE="GH_TOKEN"
+else
+  echo "Error: no GitHub token in .env — set GH_FINEGRAINED_TOKEN or GH_TOKEN" >&2
   exit 1
 fi
 
@@ -66,7 +74,7 @@ resolve_ref() {
 # api_get <endpoint> — authenticated GET, returns JSON to stdout
 api_get() {
   curl -sf \
-    --header "Authorization: Bearer ${GH_TOKEN}" \
+    --header "Authorization: Bearer ${GH_API_TOKEN}" \
     --header "Accept: application/vnd.github+json" \
     --header "X-GitHub-Api-Version: 2022-11-28" \
     "${GITHUB_API}$1"
