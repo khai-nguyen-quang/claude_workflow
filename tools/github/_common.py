@@ -39,30 +39,14 @@ def load_env() -> dict[str, str]:
     return env
 
 
-# Checked in order; the first non-empty one wins. A fine-grained token is
-# preferred because its per-repository permissions are the ones this workflow
-# documents, while a classic token's scopes are account-wide.
-TOKEN_VARS = ("GH_FINEGRAINED_TOKEN", "GH_TOKEN")
-
-
 def get_token() -> str:
-    """Return the GitHub token, preferring the .env file over the environment."""
+    """Return GH_TOKEN, preferring the .env file over the environment."""
     env = load_env()
-    for var in TOKEN_VARS:
-        token = env.get(var) or os.environ.get(var, "")
-        if token:
-            return token
-    print(f"Error: no GitHub token in .env — set one of {', '.join(TOKEN_VARS)}", file=sys.stderr)
-    sys.exit(1)
-
-
-def token_source() -> str:
-    """Which variable supplied the token. For diagnostics only."""
-    env = load_env()
-    for var in TOKEN_VARS:
-        if env.get(var) or os.environ.get(var, ""):
-            return var
-    return "(none)"
+    token = env.get("GH_TOKEN") or os.environ.get("GH_TOKEN", "")
+    if not token:
+        print("Error: GH_TOKEN not set in .env", file=sys.stderr)
+        sys.exit(1)
+    return token
 
 
 def resolve_ref(ref: str) -> tuple[str, str, str, int]:
