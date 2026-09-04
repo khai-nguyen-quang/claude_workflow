@@ -7,6 +7,7 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESOLVE="${HERE}/resolve.sh"
+CW_ROOT="$(cd "${HERE}/../.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
@@ -86,10 +87,13 @@ for spec in "khai-nguyen-quang/dash-cam#12 tools/github wf_epic/tools/github" \
   e="$(WF_ENV_FILE="${TMP}/with_gl.env" "${RESOLVE}" "$1" --epic-tools)"
   for pair in "${t}:$2" "${e}:$3"; do
     got="${pair%:*}"; want="${pair##*:}"
-    if [[ "${got}" == *"/${want}" ]]; then
+    # Suffix-matching alone would accept a doubled path such as tools/tools/github,
+    # so require the exact repo-relative path AND that the directory exists.
+    if [[ "${got}" == "${CW_ROOT}/${want}" && -d "${got}" ]]; then
       pass=$(( pass + 1 )); printf '  ok    %-46s -> %s\n' "$1" "${want}"
     else
-      fail=$(( fail + 1 )); printf '  FAIL  %-46s -> %s (want */%s)\n' "$1" "${got}" "${want}"
+      fail=$(( fail + 1 )); printf '  FAIL  %-46s -> %s (want %s/%s, must exist)\n' \
+        "$1" "${got}" "${CW_ROOT}" "${want}"
     fi
   done
 done

@@ -19,7 +19,7 @@
 set -euo pipefail
 
 _FORGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-_CW_ROOT="$(cd "${_FORGE_DIR}/.." && pwd)"
+_CW_ROOT="$(cd "${_FORGE_DIR}/../.." && pwd)"
 # WF_ENV_FILE overrides the location purely so the test suite can exercise the
 # GL_*-present and GL_*-absent paths without touching the real .env.
 ENV_FILE="${WF_ENV_FILE:-${_CW_ROOT}/.env}"
