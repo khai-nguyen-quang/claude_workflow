@@ -91,109 +91,6 @@ throughout the phases.
   it means a test-result cache can make a phase's tests *appear* to run when they did not. Trust
   the test summary output, not the exit code, when verifying in a fresh worktree.
 
-### Unattended cycle
-
-`tools/auto/run_cycle.sh` is always **stage flags + refs**. The flags say what to run, the refs
-say what to run it on; there is no default stage, and a run with none prints the usage and exits.
-
-```bash
-run_cycle.sh --design 'projectX#123' 'projectX#456'
-run_cycle.sh --code   'projectX#123' 'projectX#456'
-run_cycle.sh --verify 'projectX#123'
-run_cycle.sh --design --code --verify 'projectX#309'   # the whole issue cycle
-run_cycle.sh --research --doc 'projectX#412'           # a research ticket
-run_cycle.sh --review --fix_review 'projectX#MR!123' 'projectX#MR!456'
-```
-
-`--research`, `--design`, `--code`, `--verify` and `--doc` take **issue** refs and combine, always
-running in that order whatever order they were typed. `--review` and `--fix_review` take **MR**
-refs. The two sets cannot be mixed in one command, and `--research` cannot be combined with
-`--design` — both write `<slug>_brainstorm.md`, so design's brainstorming step would overwrite what
-research produced.
-
-**Every stage takes any number of refs.** Each ref gets its own worktree and its own window and
-they **all run at the same time** (`--serial` for one at a time). One ref failing does not stop
-the others; the exit code reports whether any did.
-
-Each stage runs in its own terminal window in that ticket's worktree. The window closes when the
-stage's gate passes; the next stage starts a fresh session, so no context carries across stages.
-
-Every window runs **Claude Code interactively** — the normal TUI, as if you had typed `claude`
-yourself — with the phase prompt already submitted, so you can watch it, answer its prompts, and
-steer it.
-
-You **exit a session (Ctrl-D or `/exit`) when its phase is done**; the driver then runs that
-phase's gate and starts the next phase in the same window by itself, or drops you back into the
-*same* session with the real failure output. You never type a phase yourself — ending a session is
-the only manual step, and it exists because a TUI never exits on its own.
-
-`--headless` swaps the TUI for `claude -p`. That is not the old blind mode — the work is still
-rendered in the window (assistant text, tool calls, results) — but it costs the human: Claude
-never stops to ask, so brainstorming records its assumptions in the spec instead of interviewing
-you, and **nobody but the model reviews the design**. It is also selected automatically when there
-is no TTY. `--interactive` only exists to override a `--headless` earlier on the command line.
-
-| Flag | Phases | Loops until |
-|-------|--------|-------------|
-| `--research` | `research` (brainstorming only) | `_brainstorm.md` written by this run |
-| `--design` | `planning` → `plan-review` | `_plan_review.md` ends in `DESIGN OK` |
-| `--code` | `coding` → `review` → `fix_review` | `_review.md` verdict is `PRODUCTION READY` |
-| `--verify` | `test` → `lint` → integration tests | build, test, lint and itest gates all pass |
-| `--doc` | `doc` | `_doc.md` names a `Document:` that exists in the worktree |
-| `--review` / `--fix_review` | `review` and/or `fix_review` | `_review.md` verdict is `PRODUCTION READY` |
-
-Every gate is run by the *driver*, not the model — build, test (with a check that tests really
-executed), lint, itest, and a fresh verdict file. A failed gate is fed back into the same session
-with the real output for up to `--max-repair` attempts; a non-approving verdict costs a round of
-the stage's own loop, capped by `--max-iter`. The driver assigns each phase its session id up
-front (`--session-id`), so a repair resumes that exact session without parsing anything out of it.
-
-The terminal is auto-detected (`gnome-terminal`, `terminator`, `xterm`, `tmux`); `--no-terminal`
-runs the stages inline, and `--terminal <kind>` forces one.
-
-**Every window is named `<ref> <branch>`** — e.g. `openpilot#MR!258 feature/472-master-pipeline-alert`
-— so parallel windows are told apart at a glance. Claude Code overwrites the terminal title with
-its own, so the driver passes `claude --name`, which is what Claude puts there instead of
-"Claude Code"; between phases, while the driver is running gates, it re-asserts the title itself.
-
-**Single-quote MR refs.** Bare `projectX#MR!177` makes an interactive bash attempt a history
-expansion on `!177` and fail with `event not found` before the script runs at all. Double quotes
-do not help; single quotes do (`set +H` disables the behaviour session-wide).
-
-`--review` alone treats the verdict as the deliverable: `NEEDS WORK` is a result, not a failure,
-and the run ends with a table of every MR, its verdict, and its report path. Combined with
-`--fix_review` it loops review → fix → re-review until `PRODUCTION READY` or `--max-iter` rounds.
-The gate is a *fresh* report carrying a verdict — a review that did not happen fails the gate and
-is retried. After a fix the code must still build, except in a repo with no `./dev.sh`, where the
-driver says the gate was skipped rather than implying it passed.
-
-The **worktrees are created one at a time before any window opens** — `worktree.sh ensure` fetches
-and runs `git worktree add` in the shared main checkout, and concurrent runs race on its
-`index.lock`. Once the checkouts exist the windows share nothing, so they run together safely.
-Pass `--jobs $(( $(nproc) / <n> ))` when several builds will overlap.
-
-A worktree that does **not exist yet** takes ~2 minutes to create (fetch + recursive submodule
-init), so three new refs means several minutes before the first window appears. The driver streams
-`worktree.sh`'s own progress and prints the elapsed time per ref — it does not pass `--quiet`,
-because a silent multi-minute wait is indistinguishable from a hang.
-
-**Research tickets.** A ticket whose description starts with `research::` answers a question
-instead of shipping a change. `--research` runs the brainstorming step alone — the same
-`<slug>_brainstorm.md` that `--design` produces first, and nothing after it: no design document, no
-code. The phase refuses a ticket that is not marked `research::` rather than researching it anyway.
-`--doc` then writes the findings up as a document under the worktree's `docs/`, committed on the
-branch so it ships with the MR; it works just as well after `--design`, and refuses when neither
-`_brainstorm.md` nor `_design_detailed.md` exists. The driver's gate reads the `Document:` line the phase
-records and then checks that file really exists.
-
-**`--design` automates a gate that is otherwise a human's.** Nobody reviews the brainstorm spec or
-the design before coding starts — the model writes both and reviews its own work. When that review
-matters, approve a design by hand and run `--code` on its own. `create_mr` is still never driven:
-the cycle stops before the MR.
-
-Phases must therefore leave objective evidence — a build that compiles, tests that run, a report
-file with a verdict — not just a claim of success in the transcript.
-
 ---
 
 ## Resume after conversation compaction
@@ -343,7 +240,7 @@ If the user provides a project/issue in their message, use that instead of scann
 - **How**: `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/doc.md`
 - **Input**: `*_brainstorm.md` and/or `*_design_overview.md` + `*_design_detailed.md`
 - **Output**: `docs/<topic>.md` in the worktree, committed; plus `*_doc.md` whose first line is
-  `Document: <path>` — what the unattended driver's gate reads before checking the file exists.
+  `Document: <path>`, followed by the file the phase wrote.
 - **State update**: Write `_state.md` with the document path and the commit.
 
 ### Phase 8: Create Merge Request
@@ -358,6 +255,28 @@ If the user provides a project/issue in their message, use that instead of scann
 - **Output**: created draft MR; composed body stored at `<prefix>mr.md`.
 - **Tool**: `$WF_TOOLS/create_merge_request.py`.
 - **State update**: Write `_state.md` with the created MR iid/URL.
+
+### Loop (modifier)
+
+- Invoke with `/wf loop <phase>... <ref> [--max-iter <n>]`. Example:
+  `/wf loop review fix_review projectX#MR!261`
+- Repeats a list of phases until a **verdict phase** approves — `review` reaching
+  `PRODUCTION READY`, or `plan-review` reaching `DESIGN OK`. Default cap: **3** rounds.
+- The list splits at the first verdict phase: phases **before** it are a prelude that runs once,
+  that phase and everything after it are the body that repeats. So
+  `/wf loop coding review fix_review projectX#309` implements the design once and then loops
+  review → fix_review over it.
+- Rounds run **back to back in the current session**; nothing is scheduled and nothing waits.
+  This is not the harness's interval-driven `/loop` command.
+- A round ends on **evidence**: a report file written during that round and carrying a verdict
+  line. A missing or stale report stops the loop rather than triggering another fix — the fixer
+  would have nothing to act on.
+- Refuses a phase list with no verdict phase, since nothing would end the loop.
+- Hitting `--max-iter` without approval stops and hands back to a human. The cap is never raised
+  automatically.
+- **How**: `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/loop.md`
+- **Output**: whatever the looped phases produce, plus a round/verdict summary.
+- **State update**: `_state.md` is written after every round.
 
 ### Debug (utility)
 - Invoke with `/wf debug <ref>` where `<ref>` is either a GitLab issue (`projectX#123`) or a free-form bug slug (`fcw_not_alert`).

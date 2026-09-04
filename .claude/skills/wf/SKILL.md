@@ -2,19 +2,23 @@
 name: wf
 description: >
   Run a single Claude workflow phase for a GitLab or GitHub issue, MR or PR.
-  Usage: /wf <phase> <ref>
+  Usage: /wf <phase> <ref>  |  /wf loop <phase>... <ref>
   Phases: planning, plan-review, coding, test, lint, review, fix_review, collect, debug
-  Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf fix_review projectX#MR!186  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
+  Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf fix_review projectX#MR!186  |  /wf loop review fix_review projectX#MR!261  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
 ---
 
 ## Parse args
 
 Split the args into `<phase>` (first token) and `<ref>` (everything after).
 
+If `<phase>` is `loop`, the rest of the args is a phase list plus a ref — leave it unsplit and go
+straight to `phases/loop.md`, which parses it.
+
 If args are empty, print this usage and stop:
 
 ```
 Usage: /wf <phase> <ref>
+       /wf loop <phase>... <ref> [--max-iter <n>]
 
 Phases:
   planning      Phase 1 — brainstorm + design overview/detail [wf-planner agent]
@@ -26,6 +30,12 @@ Phases:
   fix_review    Phase 7 — fix review comments               [wf-coder agent]
   collect       Utility — collect project context into a must-read file
   debug         Utility — investigate a bug, produce root cause analysis [wf-debugger agent]
+  loop          Modifier — repeat phases until a verdict approves
+
+Loop:
+  /wf loop review fix_review projectX#MR!261      until PRODUCTION READY
+  /wf loop coding review fix_review projectX#309  code once, then loop
+  /wf loop planning plan-review projectX#309      until DESIGN OK
 
 Ref formats:
   GitLab
@@ -49,6 +59,9 @@ If the first token is **not** a recognized phase, go to **Fallback**.
 For the `collect` phase, `<ref>` is a bare project name (no `#`); `<project>` = `<ref>`.
 
 ## Prepare context (always, before any phase)
+
+For `loop` these steps run after `loop.md` has parsed the ref out of the phase list, and
+run once for the whole loop rather than once per phase.
 
 **Step 0 — derive workspace root**
 `WORKSPACE_ROOT` is the parent of `claude_workflow/`. Derive it from the workspace-level
@@ -97,9 +110,11 @@ For each phase, read the corresponding file and follow it exactly:
 | `fix_review` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/fix_review.md` |
 | `collect` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/collect.md` |
 | `debug` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/debug.md` |
+| `loop` | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/loop.md` |
 | *(unrecognized)* | `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/fallback.md` |
 
 ## After each phase
 
 Write or update `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md`.
-The `collect` phase does not use a state file (it is stateless and idempotent).
+The `collect` phase does not use a state file (it is stateless and idempotent). Under `loop`, this
+happens once per round, not once per phase.
