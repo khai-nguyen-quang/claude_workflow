@@ -429,6 +429,11 @@ the revision. Sonnet for lenses, Opus for consolidator, author and the persisten
 |------|---------|
 | `tools/gitlab/fetch_epic.py` | `GET /api/v4/groups/<url-encoded GL_NAMESPACE>/epics/<iid>` and `…/epics/<iid>/issues` |
 | `tools/gitlab/create_issue.py` | target project + `--epic <id>`, `--dry-run`; links using the issue's **global id** |
+| `tools/github/fetch_epic.py` | `GET /repos/<owner>/<repo>/issues/<n>` and `…/issues/<n>/sub_issues` |
+| `tools/github/create_issue.py` | target `owner/repo` + `--parent <n>`, `--dry-run`; links using the issue's **global id**, not its number |
+
+Both directories carry the same filenames; `tools/forge/resolve.sh` picks between them, so the
+phase steps below are written once and run on either forge.
 | `.claude/hooks/task_completed.sh` | the gate (§6) |
 | `.claude/hooks/teammate_idle.sh` | the loop (§6) |
 | phase 4 seed script | epic → tickets → worktrees → `_queue.md` → task graph with WIP edges |

@@ -42,7 +42,7 @@ Pick the branch by ref; the GitLab steps in the online branch are gated to MR re
 
 Run:
 ```bash
-$WORKSPACE_ROOT/claude_workflow/tools/gitlab/fetch_mr_content.sh <ref> --notes
+$WF_TOOLS/fetch_mr_content.sh <ref> --notes
 ```
 
 Save the output to:
@@ -54,7 +54,7 @@ Where `<project>` and `<id>` are derived from the MR ref (e.g. for `projectX#MR!
 
 Also check out the MR branch so the code matches the review:
 ```bash
-$WORKSPACE_ROOT/claude_workflow/tools/gitlab/checkout_mr_branch.sh <ref>
+$WF_TOOLS/checkout_mr_branch.sh <ref>
 ```
 
 ### Step 2.O — Parse comments
@@ -213,7 +213,7 @@ Every thread that this phase addressed gets its own reply.
 
 List the threads and their ids:
 ```bash
-$WORKSPACE_ROOT/claude_workflow/tools/gitlab/reply_and_resolve.py <ref> --list
+$WF_TOOLS/reply_and_resolve.py <ref> --list
 ```
 
 Build a plan file — one entry per thread, `body` naming **what changed and in which commit**,
@@ -227,8 +227,8 @@ one or two sentences, no analysis:
 
 Check it before it goes out, then apply:
 ```bash
-$WORKSPACE_ROOT/claude_workflow/tools/gitlab/reply_and_resolve.py <ref> --plan <plan.json> --dry-run
-$WORKSPACE_ROOT/claude_workflow/tools/gitlab/reply_and_resolve.py <ref> --plan <plan.json>
+$WF_TOOLS/reply_and_resolve.py <ref> --plan <plan.json> --dry-run
+$WF_TOOLS/reply_and_resolve.py <ref> --plan <plan.json>
 ```
 
 ### 6b — Resolve what is fixed

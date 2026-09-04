@@ -485,7 +485,7 @@ findings were reported as resolved; the replacement had never been reviewed, and
 
    **(MR only)** Source these from GitLab: fetch the MR description (`fetch_mr_content.sh`) and the
    linked issue (`fetch_issue_from_mr.py`) with tools in
-   `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/`; if a needed tool is missing, implement it per
+   `$WF_TOOLS/` (`tools/gitlab/` or `tools/github/`); if a needed tool is missing, implement it per
    `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`. For a **local** review, derive the two
    paragraphs from the branch's commit messages and the intent stated in your task context — no
    GitLab fetch.

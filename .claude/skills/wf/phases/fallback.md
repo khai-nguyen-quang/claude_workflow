@@ -16,7 +16,7 @@ If no ref is found, `<ref>` is empty and the full args is `<intent>`.
 
 | Intent keywords | Action |
 |---|---|
-| verify, check, access, accessible, ping | Run `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/verify_access.sh` with the project from `<ref>` |
+| verify, check, access, accessible, ping | Run `$WF_TOOLS/verify_access.sh` with the project/repository from `<ref>` |
 | fetch, show, describe, info, what is | Run the appropriate fetch tool (`fetch_ticket_description.py` for issues, `fetch_mr_content.sh` for MRs) |
 | diff, changes | Run `fetch_mr_content.sh <ref> --diff` |
 | comments, notes, discussion | Run `fetch_mr_content.sh <ref> --notes` |

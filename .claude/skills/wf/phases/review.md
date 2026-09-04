@@ -4,13 +4,13 @@
 
 1. Checkout the MR branch:
    ```bash
-   bash $WORKSPACE_ROOT/claude_workflow/tools/gitlab/checkout_mr_branch.sh <ref>
+   bash $WF_TOOLS/checkout_mr_branch.sh <ref>
    ```
    Announce the branch name to the user. If checkout fails, stop and report the error.
 
 2. Fetch the MR description:
    ```bash
-   bash $WORKSPACE_ROOT/claude_workflow/tools/gitlab/fetch_mr_content.sh <ref>
+   bash $WF_TOOLS/fetch_mr_content.sh <ref>
    ```
    Extract the **Summary** and **Implementation Details** sections. Store as `<mr_summary>` and `<mr_implementation>`.
 

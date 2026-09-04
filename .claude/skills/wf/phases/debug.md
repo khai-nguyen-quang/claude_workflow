@@ -25,7 +25,7 @@ Read `<debug_folder>/<debug_prefix>_state.md` if it exists → `<debug_state>`.
 
 **Step 3 — fetch bug description**
 
-- GitLab issue: run `python3 $WORKSPACE_ROOT/claude_workflow/tools/gitlab/fetch_ticket_description.py <project>#<id>` → `<bug_description>`.
+- Issue ref: run `python3 $WF_TOOLS/fetch_ticket_description.py <ref>` → `<bug_description>`.
 - Free-form: `<bug_description>` = text the user provided describing the bug.
 
 **Step 4 — load project context** (skip if `<project>` = `(unknown)`)

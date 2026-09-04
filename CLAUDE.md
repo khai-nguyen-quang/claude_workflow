@@ -97,5 +97,8 @@ See `template/workflow.md` for the full phase-by-phase workflow (Planning → Pl
 
 ## Tools
 
-All GitLab interaction tools live in `tools/gitlab/`. Credentials are read from a `.env`
-file three levels above this repo (next to the project being worked on). Required variable: `GL_TOKEN`.
+Forge interaction tools live in `tools/gitlab/` and `tools/github/`, selected per ref by
+`tools/forge/resolve.sh`. Credentials are read from a `.env`
+file three levels above this repo (next to the project being worked on).
+Required: `GL_TOKEN`, `GL_URL`, `GL_NAMESPACE` for GitLab; `GH_TOKEN` for GitHub. Configure only
+the forge(s) you use — the resolver tolerates the other one being absent.

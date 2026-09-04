@@ -53,7 +53,7 @@ current="$(git rev-parse --abbrev-ref HEAD)"
 - If `current` already ends in `-<id>` (issue: `feature/<slug>-<id>` / `bug/<slug>-<id>`) or
   matches `feature/<plan_slug>` (free-form), you are on the dedicated branch — continue.
 - Otherwise create it:
-  - **(GitLab issue)** `bash $WORKSPACE_ROOT/claude_workflow/tools/gitlab/branch/create_branch.sh <project>#<id> --type feature` — enforces the `feature/<slug>-<id>` (or `bug/...`) convention and checks out the new branch.
+  - **(issue ref)** `bash $WF_TOOLS/branch/create_branch.sh <ref> --type feature` — enforces the `feature/<slug>-<id>` (or `bug/...`) convention and checks out the new branch.
   - **(Free-form)** `git checkout -b feature/<plan_slug>` off the intended base.
 
 **Base-branch caveat**: branch creation branches off the **current HEAD**, not the default
@@ -68,10 +68,10 @@ If the branch already exists from a previous session, `create_branch.sh` aborts 
 
 ### Step 1 — Capture the request
 
-**(GitLab issue only)** Fetch the issue description with tools in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/`:
+**(issue refs only)** Fetch the issue description with the forge tools in `$WF_TOOLS/`:
 
 ```bash
-python3 $WORKSPACE_ROOT/claude_workflow/tools/gitlab/fetch_ticket_description.py <project>#<id>
+python3 $WF_TOOLS/fetch_ticket_description.py <ref>
 ```
 
 For a **free-form** request (`<plan_source>` = `user-prompt`), the source is `<feature_description>` from the prompt — no fetch.

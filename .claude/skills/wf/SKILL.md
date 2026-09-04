@@ -1,7 +1,7 @@
 ---
 name: wf
 description: >
-  Run a single Claude workflow phase for a GitLab issue or MR.
+  Run a single Claude workflow phase for a GitLab or GitHub issue, MR or PR.
   Usage: /wf <phase> <ref>
   Phases: planning, plan-review, coding, test, lint, review, fix_review, collect, debug
   Examples: /wf review projectX#MR!177  |  /wf planning projectX#309  |  /wf fix_review projectX#MR!186  |  /wf collect projectX  |  /wf debug projectX#123  |  /wf debug fcw_not_alert
@@ -28,11 +28,20 @@ Phases:
   debug         Utility — investigate a bug, produce root cause analysis [wf-debugger agent]
 
 Ref formats:
-  projectX#309        GitLab issue 309 in projectX
-  projectX#MR!177     GitLab MR 177 in projectX
-  projectX            Project name only (for collect phase)
-  projectX#123        GitLab issue for debug phase
-  fcw_not_alert       Free-form bug slug (describe bug in the prompt message)
+  GitLab
+    projectX#309              issue 309 in projectX
+    projectX#MR!177           MR 177 in projectX
+    group/sub/projectX#309    full namespace path
+  GitHub
+    owner/repo#12             issue 12          e.g. khai-nguyen-quang/dash-cam#12
+    owner/repo#PR!45          pull request 45
+  Either
+    <full URL to the issue / MR / PR>
+  Other
+    projectX                  project name only (for collect phase)
+    fcw_not_alert             free-form bug slug (describe the bug in the prompt)
+
+A ref with no "/" is GitLab. A GitHub ref always carries owner/repo.
 ```
 
 If the first token is **not** a recognized phase, go to **Fallback**.
@@ -42,11 +51,29 @@ For the `collect` phase, `<ref>` is a bare project name (no `#`); `<project>` = 
 ## Prepare context (always, before any phase)
 
 **Step 0 — derive workspace root**
-`WORKSPACE_ROOT` is the parent of `claude_workflow/`. Derive it from the workspace-level `CLAUDE.md` path. Inject into every agent prompt.
+`WORKSPACE_ROOT` is the parent of `claude_workflow/`. Derive it from the workspace-level
+`CLAUDE.md` path when that file exists; otherwise take the parent of the `claude_workflow/`
+directory this skill lives in. Inject into every agent prompt.
 
 **Step 1 — derive identifiers**
-- `<project>`: part of `<ref>` before `#`, or `<ref>` itself if no `#`
-- `<id>`: number after `#` or `#MR!`; empty for `collect`
+- `<project>`: the part of `<ref>` before `#`, reduced to its **last path segment**, or `<ref>`
+  itself if there is no `#`. So `projectX#309` and `khai-nguyen-quang/dash-cam#12` give
+  `projectX` and `dash-cam` — never a value containing `/`, which would break both
+  `.tmp/<project>-<id>/` and `$WORKSPACE_ROOT/<project>/`.
+- `<id>`: number after `#`, `#MR!` or `#PR!`; empty for `collect`
+
+**Step 1.5 — resolve the forge**
+Run `$WORKSPACE_ROOT/claude_workflow/tools/forge/resolve.sh <ref>`. It prints
+`<forge> <tool-dir>`. Export both:
+
+```bash
+WF_FORGE=$(.../tools/forge/resolve.sh "<ref>" --forge)   # github | gitlab
+WF_TOOLS=$(.../tools/forge/resolve.sh "<ref>" --tools)   # absolute path to the tool directory
+```
+
+Every phase invokes forge tools as `$WF_TOOLS/<tool>` — the two tool directories carry the same
+filenames, so no phase ever branches on the forge. Skip this step for `collect`, which touches no
+forge.
 
 **Step 2 — load state file** (skip for `collect`)
 Read `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_state.md` if it exists → `<state_context>`.

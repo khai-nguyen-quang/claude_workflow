@@ -138,5 +138,5 @@ If the user provides a project/issue in their message, use that instead of scann
 - **State update**: the subagent writes and updates `_state.md` throughout to survive context compaction.
 
 ## Tools
-Content of Gitlab Issue or Gitlab Merge Request is fetched using tools in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/`
+Content of an issue, merge request or pull request is fetched using the forge tools in `$WF_TOOLS/` — `tools/gitlab/` or `tools/github/`, chosen by `tools/forge/resolve.sh`
 **If new tools needed**: implement them in accordance to `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`

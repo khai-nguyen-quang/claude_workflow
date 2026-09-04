@@ -352,7 +352,7 @@ If the user provides a project/issue in their message, use that instead of scann
 - **Confirmation required**: creating an MR is outward-facing — show the title, target branch, draft flag, and labels, and ask before creating.
 - **Input**: the code changes from Coding (committed and pushed on the working branch).
 - **Output**: created draft MR; composed body stored at `<prefix>mr.md`.
-- **Tool**: `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/create_merge_request.py`.
+- **Tool**: `$WF_TOOLS/create_merge_request.py`.
 - **State update**: Write `_state.md` with the created MR iid/URL.
 
 ### Debug (utility)
@@ -367,5 +367,5 @@ If the user provides a project/issue in their message, use that instead of scann
 - **State update**: the subagent writes and updates `_state.md` throughout to survive context compaction.
 
 ## Tools
-Content of Gitlab Issue or Gitlab Merge Request is fetched using tools in `$WORKSPACE_ROOT/claude_workflow/tools/gitlab/`
+Content of an issue, merge request or pull request is fetched using the forge tools in `$WF_TOOLS/` — `tools/gitlab/` or `tools/github/`, chosen by `tools/forge/resolve.sh`
 **If new tools needed**: implement them in accordance to `$WORKSPACE_ROOT/claude_workflow/instructions/gitlab.md`
