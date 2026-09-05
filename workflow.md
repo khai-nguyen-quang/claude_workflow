@@ -69,7 +69,7 @@ If the user provides a project/issue in their message, use that instead of scann
 |---|---|
 | No files | Phase 1 — start strategy |
 | `_strategy.md` only | Phase 1 — strategy done, awaiting design |
-| `_strategy.md` + `_design.md` | Phase 2 — planning review |
+| `_strategy.md` + `_design_{overview,detailed}.md` | Phase 2 — planning review |
 | Above + review passed noted | Phase 3 — start coding |
 | Source code changes in git | Phase 4 — write tests |
 | Tests written | Phase 5 — lint/QA |
@@ -80,11 +80,15 @@ If the user provides a project/issue in their message, use that instead of scann
 ### Phase 1: Planning
 - This phase can be invoked individually with prompt format "Planning <project>#<number>". Example: "Planning projectX#309"
 - Inform user that you are entering "Planning phase"
-- Planning phase includes making strategy and design document
+- Planning phase includes making the strategy and the design
+- **The design is two documents, not one**, structured by `$WORKSPACE_ROOT/claude_workflow/template/design_document.md`:
+  - `*_design_overview.md` — purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions.
+  - `*_design_detailed.md` — one section per component (receives / produces / assumes about the rest of the system / types and signatures / error conditions / edge cases and failure modes), then `## Interfaces`, build integration, test strategy, and an end-to-end walkthrough.
+  - Every component section names its upstream and downstream components.
 - **How**: Uses `$WORKSPACE_ROOT/claude_workflow/instructions/planning.md` as the main instruction going through all steps of planning phase.
-- **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_strategy.md` and `_design.md` to determine which step to resume.
+- **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_strategy.md`, `_design_overview.md` and `_design_detailed.md` to determine which step to resume.
 - **Input**: Gitlab Issue number or Gitlab Merge Request
-- **Output**: `*_strategy.md`, `*_design.md`
+- **Output**: `*_strategy.md`, `*_design_overview.md`, `*_design_detailed.md`
 - **State update**: Write `_state.md` after strategy is approved; update it after design is approved.
 
 ### Phase 2: Planning review
@@ -97,9 +101,9 @@ If the user provides a project/issue in their message, use that instead of scann
 ### Phase 3: Coding
 - This phase can be invoked individually with prompt format "Coding <project>#<number>". Example: "Coding projectX#309"
 - Inform user that you are entering "Coding phase"
-- Coding is started **only when design document of corresponding Gitlab Issue is available**. Otherwise, run planning phase before proceeding with coding.
-- Use `$WORKSPACE_ROOT/claude_workflow/instructions/coding.md` to implement the approved design document.
-- **Input**: Design document of that Gitlab Issue at `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design.md` (use the correct prefix per **Artifact paths**). If it is not available, iterate back to planning phase to complete planning steps.
+- Coding is started **only when both design documents of the corresponding Gitlab Issue are available**. Otherwise, run planning phase before proceeding with coding.
+- Use `$WORKSPACE_ROOT/claude_workflow/instructions/coding.md` to implement the approved design.
+- **Input**: both design documents of that Gitlab Issue at `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design_overview.md` and `..._design_detailed.md` (use the correct prefix per **Artifact paths**). If they are not available, iterate back to planning phase to complete planning steps.
 - **Output**: Source code
 - **State update**: Update `_state.md` with each completed sub-task (e.g., per-file or per-component milestone).
 
@@ -119,7 +123,7 @@ If the user provides a project/issue in their message, use that instead of scann
 
 ### Phase 6: Review
 - This phase is to review the code changes made at phase 3 Coding
-- Code changes are reviewed against the design document, coding must follow design
+- Code changes are reviewed against the design documents, coding must follow design
 - Inform user that you are entering "Code Review phase"
 - Use `$WORKSPACE_ROOT/claude_workflow/instructions/review.md` as the main instruction for coding review
 - **Input**: the code changes made at phase 3

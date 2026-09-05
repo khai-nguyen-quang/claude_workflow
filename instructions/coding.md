@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implement the approved design document into production-ready source code. Every logical unit must compile cleanly before moving on to the next.
+Implement the approved design into production-ready source code. Every logical unit must compile cleanly before moving on to the next.
 
 This single workflow serves both input variants — a **GitLab issue** (`<ref>` has `#`) or a **free-form** request (`<ref>` has no `#`, the same work the planning phase designed). Every step is identical; only Step 0's working-tree check differs (a ticket has a worktree, a free-form run may not). The variant is fixed by the phase as `<work_source>` = `gitlab-issue` or `user-prompt`.
 
@@ -16,7 +16,8 @@ This single workflow serves both input variants — a **GitLab issue** (`<ref>` 
 - `REPO_ROOT` — absolute path to the checkout to work in: the ticket's own worktree
   (`$WORKSPACE_ROOT/<project>-worktree/<slug>`) for a GitLab issue or MR, otherwise
   `$WORKSPACE_ROOT/<project>`. Never operate on a different checkout.
-- Design document: `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_design.md`
+- Design overview: `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_design_overview.md`
+- Detailed design: `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_design_detailed.md`
 - `<state_context>` — content of `_state.md` if resuming a previous session (may be absent)
 
 ---
@@ -66,7 +67,7 @@ Do not proceed to Step 1 until both checks pass.
 
 ### Step 1 — Assess complexity and select model
 
-Before writing any code, classify the task using the design document:
+Before writing any code, classify the task using the design documents:
 
 | Complexity | Examples | Model |
 |------------|----------|-------|
@@ -103,17 +104,27 @@ If the language is ambiguous, ask before proceeding.
 
 ---
 
-### Step 4 — Read the design document
+### Step 4 — Read the design documents
 
-Read `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_design.md` in full.
+Read **both**, overview first:
 
-Identify the implementation units (classes, modules, files) in dependency order — implement lower-level components before the ones that depend on them.
+1. `<work_slug>_design_overview.md` — architecture, diagrams and the component map. Read it before
+   any detail so you know where each component sits and what feeds it.
+2. `<work_slug>_design_detailed.md` — in full. Each component section carries its exact types,
+   error conditions, edge cases and failure modes; `## Interfaces` is the contract, and the tests
+   are written against it, so implement it exactly as declared.
+
+The implementation units are the detailed document's component sections. Take them in the
+overview's component-map order, which is dataflow order: it puts lower-level components before the
+ones that depend on them. Each section's *Assumes about the rest of the system* names what must
+already hold — if a component you depend on does not deliver it, that is a design finding, not
+something to paper over in code.
 
 ---
 
 ### Step 5 — Implement
 
-For each implementation unit listed in the design document:
+For each component section in the detailed design:
 
 1. Write the code following the conventions from the loaded language skill.
 2. Implement **only** what is specified in the design — no extra features, refactors, or abstractions beyond the scope.
@@ -146,5 +157,5 @@ Proceed to Phase 4: Write tests.
 
 ## Output files
 
-- Source code files as specified in the design document
+- Source code files as specified in the detailed design
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<work_slug>/<work_slug>_state.md` — updated after each compiled unit

@@ -15,8 +15,8 @@ Four phases, plus device testing which is not yet defined.
 | # | Phase | Mechanism | Loop | Input | Output |
 |---|-------|-----------|------|-------|--------|
 | 1 | Research | subagent fan-out | no | `Epic#<id>` | `_strategy.md` |
-| 2 | Design | subagent fan-out | yes, ≤3 rounds | `_strategy.md` | `_design.md` |
-| 3 | Split (reconcile + split) | solo + human confirm | no | `_design.md` + existing children | tickets on GitLab |
+| 2 | Design | subagent fan-out | yes, ≤3 rounds | `_strategy.md` | `_design_overview.md` + `_design_detailed.md` |
+| 3 | Split (reconcile + split) | solo + human confirm | no | the design pair + existing children | tickets on GitLab |
 | 4 | Implementation | **agent team** | yes, ≤2 rounds per ticket | tickets | MRs |
 | — | Test on device | TBD | | | |
 
@@ -30,7 +30,7 @@ separable in a stream: at any instant all three are running, on different ticket
 
 ```
 session 1: research  ─▶ _strategy.md
-session 2: design    ─▶ _design.md        (internally loops)
+session 2: design    ─▶ _design_{overview,detailed}.md   (internally loops)
 session 3: split     ─▶ tickets on GitLab
 session 4: ══ TEAM ══ coder ∥ reviewer ∥ fixer, streaming every ticket ══▶ MRs
 ```
@@ -85,11 +85,13 @@ Research lenses that read a repository run **once per project in scope**.
   epic-60_research_code_<project>.md
   epic-60_strategy.md                       gate for phase 2
   # phase 2
-  epic-60_design_draft.md                   overwritten each round
+  epic-60_design_overview_draft.md          overwritten each round
+  epic-60_design_detailed_draft.md          overwritten each round
   epic-60_design_review_r<N>_{usecases,scale,corners}.md
   epic-60_design_review_r<N>.md             consolidated, carries verdict
   epic-60_design_decisions.md               ledger, appended every round
-  epic-60_design.md                         gate for phase 3
+  epic-60_design_overview.md                gate for phase 3
+  epic-60_design_detailed.md                gate for phase 3
   # phase 3
   epic-60_tickets.md                        dry run, gate for posting
   # phase 4
@@ -135,7 +137,15 @@ nothing for a loop to converge.
 
 ## 4. Phase 2 — Design
 
-Turns the strategy into a design document that phase 3 can split and phase 4 can implement.
+Turns the strategy into the design that phase 3 can split and phase 4 can implement.
+
+**The design is two documents, not one.** `_design_overview.md` answers *how does this fit
+together* — architecture, diagrams, the component map, the decisions — and is readable in one
+sitting. `_design_detailed.md` answers *what exactly do I build* — one section per component, the
+normative `## Interfaces`, build, tests, and the end-to-end walkthrough. `template/design_document.md`
+is the normative structure for both. One document cannot serve both readers: the architecture
+drowns in signatures and the components read as an isolated list, which is the exact failure this
+split exists to fix.
 
 ```
                     ┌────────────────────────────────────────────┐
@@ -146,7 +156,7 @@ _strategy.md ─▶ author ─▶ draft ─▶ 3 reviewers ─▶ consolidate �
                                                     │
                                                  DESIGN OK
                                                     ▼
-                                              write_design ─▶ _design.md
+                                              write_design ─▶ _design_{overview,detailed}.md
 ```
 
 ### The freshness asymmetry — the core of this phase
@@ -155,8 +165,8 @@ _strategy.md ─▶ author ─▶ draft ─▶ 3 reviewers ─▶ consolidate �
 
 - **Author** is *one warm agent across all rounds* (`wf-planner`). It knows why each choice was
   made, so it does not undo a deliberate decision while fixing an unrelated finding. Round 1 it
-  drafts from `_strategy.md`; round N it revises from the findings. Draft and fix are the same
-  role, seeded differently — not two agents.
+  drafts both documents from `_strategy.md`; round N it revises them from the findings. Draft and
+  fix are the same role, seeded differently — not two agents.
 - **Reviewers** are *fresh instances every round* (`wf-reviewer` ×3). A warm reviewer checks only
   "did they fix my list"; a cold one re-reads the whole design and catches what the fix broke.
   **Regressions introduced by a fix are the main reason a second round exists**, and only a cold
@@ -167,9 +177,13 @@ _strategy.md ─▶ author ─▶ draft ─▶ 3 reviewers ─▶ consolidate �
 
 | Lens | Reviews |
 |------|---------|
-| usecases | does it cover all necessary user cases; is `## Interfaces` complete enough to code against |
+| usecases | does it cover all necessary user cases; is `## Interfaces` complete enough to code against; does the end-to-end walkthrough trace through the component sections |
 | scale | is it easy to scale up in future |
-| corners | which corner cases are missing |
+| corners | which corner cases are missing; are error conditions, edge cases and failure modes precise per component |
+
+Reviewers read **both documents as one design**, and all three check the isolation failure: a
+component section that never names its upstream and downstream components, or an assumption that
+no named component delivers.
 
 Every finding is classified **blocking / major / minor**, so the exit condition is mechanical.
 
@@ -192,18 +206,20 @@ is right.
 
 ### write_design
 
-**Assembly only** — house style, Mermaid per `template/diagram.md`, and the normative
-`## Interfaces` section. It makes **no design decisions**, because nothing reviews it. If it needs
-to make a call, that call belongs in a round.
+**Assembly only** — each draft becomes its final document one to one: house style, Mermaid per
+`template/diagram.md`, and the normative `## Interfaces` section in the detailed document. It makes
+**no design decisions**, because nothing reviews it. If it needs to make a call, that call belongs
+in a round — including any call about *which document a section belongs in*, which is why the
+author drafts the split from round 1 rather than assembling it here.
 
 ### `## Interfaces` is mandatory
 
-The design must declare signatures, message types, file paths and error cases precisely enough to
-act as a contract between agents who cannot see each other's work. Phase 4's test agents write
-against it. Without it, phase 4 silently degrades into a sequential pipeline.
+`_design_detailed.md` must declare signatures, message types, file paths and error cases precisely
+enough to act as a contract between agents who cannot see each other's work. Phase 4's test agents
+write against it. Without it, phase 4 silently degrades into a sequential pipeline.
 
-**Gate.** `_design.md` exists, contains `## Interfaces`, and the last round's consolidated review
-says `DESIGN OK`.
+**Gate.** `_design_overview.md` and `_design_detailed.md` both exist, the detailed one contains
+`## Interfaces`, and the last round's consolidated review says `DESIGN OK`.
 
 ---
 
@@ -332,7 +348,7 @@ in `fix_review`; these replies become the MR threads later. This is phase 2's le
 1. **Converged** — verdict is `PRODUCTION READY`.
 2. **Diverging** — round N has as many blocking findings as round N−1.
 3. **Capped** — **2 rounds**, lower than design's 3. A ticket needing a third round usually has a
-   design problem, not a code problem, and should be raised as a finding against `_design.md`
+   design problem, not a code problem, and should be raised as a finding against the design
    rather than ground down by review.
 
 ### Backpressure, and the deadlock it can cause

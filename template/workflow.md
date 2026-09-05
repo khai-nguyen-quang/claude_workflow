@@ -183,7 +183,7 @@ instead of shipping a change. `--research` runs the brainstorming step alone —
 code. The phase refuses a ticket that is not marked `research::` rather than researching it anyway.
 `--doc` then writes the findings up as a document under the worktree's `docs/`, committed on the
 branch so it ships with the MR; it works just as well after `--design`, and refuses when neither
-`_brainstorm.md` nor `_design.md` exists. The driver's gate reads the `Document:` line the phase
+`_brainstorm.md` nor `_design_detailed.md` exists. The driver's gate reads the `Document:` line the phase
 records and then checks that file really exists.
 
 **`--design` automates a gate that is otherwise a human's.** Nobody reviews the brainstorm spec or
@@ -247,7 +247,7 @@ If the user provides a project/issue in their message, use that instead of scann
 |---|---|
 | No files | Phase 1 — start brainstorming |
 | `_brainstorm.md` only | Phase 1 — brainstorm done, awaiting design |
-| `_brainstorm.md` + `_design.md` | Phase 2 — planning review |
+| `_brainstorm.md` + `_design_{overview,detailed}.md` | Phase 2 — planning review |
 | Above + review passed noted | Phase 3 — start coding |
 | Source code changes in git | Phase 4 — write tests |
 | Tests written | Phase 5 — lint/QA |
@@ -278,12 +278,16 @@ If the user provides a project/issue in their message, use that instead of scann
 - This phase can be invoked individually with prompt format "Planning <project>#<number>" for a GitLab issue (e.g. "Planning projectX#309"), or with a free-form slug / project name when there is no issue (e.g. "Planning fcw_alert_tuning"), describing the feature in the prompt.
 - Inform user that you are entering "Planning phase"
 - Planning starts with a **brainstorming step**: it delegates to the `superpowers:brainstorming` skill to turn the ticket into an approved design spec (`*_brainstorm.md`), then hands that spec to the wf-planner. Brainstorming stops after the spec is approved — it does **not** run into `writing-plans`; the wf-planner does the planning.
-- Planning phase includes brainstorming the high-level approach (the brainstorm spec replaces the old strategy document) and writing the design document
-- The design document embeds Mermaid diagrams (block / architectural / sequence) following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`.
+- Planning phase includes brainstorming the high-level approach (the brainstorm spec replaces the old strategy document) and writing the design
+- **The design is two documents, not one**, structured by `$WORKSPACE_ROOT/claude_workflow/template/design_document.md`:
+  - `*_design_overview.md` — purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions. Readable start to finish in one sitting.
+  - `*_design_detailed.md` — one section per component (what it receives, what it produces, what it assumes about the rest of the system, types and signatures, error conditions, edge cases and failure modes), then `## Interfaces`, build integration, test strategy, and an end-to-end walkthrough of the main user actions.
+  - Every component section names its upstream and downstream components. A component described in isolation is the failure this structure exists to prevent.
+- The design overview embeds Mermaid diagrams (block / architectural / sequence) following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`, **before** any detailed section.
 - **How**: Uses `$WORKSPACE_ROOT/claude_workflow/instructions/planning.md` as the main instruction going through all steps of planning phase.
-- **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_brainstorm.md` and `_design.md` to determine which step to resume.
+- **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_brainstorm.md`, `_design_overview.md` and `_design_detailed.md` to determine which step to resume.
 - **Input**: Gitlab Issue number or Gitlab Merge Request
-- **Output**: `*_brainstorm.md`, `*_design.md`
+- **Output**: `*_brainstorm.md`, `*_design_overview.md`, `*_design_detailed.md`
 - **State update**: Write `_state.md` after the brainstorm spec is approved, and again after design is approved.
 
 ### Phase 2: Planning review
@@ -296,9 +300,9 @@ If the user provides a project/issue in their message, use that instead of scann
 ### Phase 3: Coding
 - This phase can be invoked individually with prompt format "Coding <project>#<number>". Example: "Coding projectX#309"
 - Inform user that you are entering "Coding phase"
-- Coding is started **only when design document of corresponding Gitlab Issue is available**. Otherwise, run planning phase before proceeding with coding.
-- Use `$WORKSPACE_ROOT/claude_workflow/instructions/coding.md` to implement the approved design document.
-- **Input**: Design document of that Gitlab Issue at `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design.md` (use the correct prefix per **Artifact paths**). If it is not available, iterate back to planning phase to complete planning steps.
+- Coding is started **only when both design documents of the corresponding Gitlab Issue are available**. Otherwise, run planning phase before proceeding with coding.
+- Use `$WORKSPACE_ROOT/claude_workflow/instructions/coding.md` to implement the approved design.
+- **Input**: both design documents of that Gitlab Issue at `$WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design_overview.md` and `..._design_detailed.md` (use the correct prefix per **Artifact paths**). Read the overview first for placement, then implement from the detailed document. If they are not available, iterate back to planning phase to complete planning steps.
 - **Output**: Source code
 - **State update**: Update `_state.md` with each completed sub-task (e.g., per-file or per-component milestone).
 
@@ -318,7 +322,7 @@ If the user provides a project/issue in their message, use that instead of scann
 
 ### Phase 6: Review
 - This phase is to review the code changes made at phase 3 Coding
-- Code changes are reviewed against the design document, coding must follow design
+- Code changes are reviewed against the design documents, coding must follow design
 - Inform user that you are entering "Code Review phase"
 - Use `$WORKSPACE_ROOT/claude_workflow/instructions/review.md` as the main instruction for coding review
 - **Input**: the code changes made at phase 3
@@ -328,7 +332,7 @@ If the user provides a project/issue in their message, use that instead of scann
 ### Doc: generate documentation
 - Invoke with `/wf doc <project>#<number>`. Example: `/wf doc projectX#412`
 - Inform user that you are entering "Doc phase"
-- Turns `*_brainstorm.md` and/or `*_design.md` into a **document in the project repository**, under
+- Turns `*_brainstorm.md` and/or the `*_design_{overview,detailed}.md` pair into a **document in the project repository**, under
   the worktree's `docs/`, following the naming and style of the docs already there. It stops if
   neither artifact exists — this phase documents work that was done, not work that was described.
 - The document addresses a reader who has never seen the ticket or this workflow: no phases, no
@@ -337,7 +341,7 @@ If the user provides a project/issue in their message, use that instead of scann
 - Commits that one file on the ticket's branch so it ships with the MR (≤5 lines, no attribution).
   It never pushes.
 - **How**: `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/doc.md`
-- **Input**: `*_brainstorm.md` and/or `*_design.md`
+- **Input**: `*_brainstorm.md` and/or `*_design_overview.md` + `*_design_detailed.md`
 - **Output**: `docs/<topic>.md` in the worktree, committed; plus `*_doc.md` whose first line is
   `Document: <path>` — what the unattended driver's gate reads before checking the file exists.
 - **State update**: Write `_state.md` with the document path and the commit.
@@ -348,7 +352,7 @@ If the user provides a project/issue in their message, use that instead of scann
 - `<ref>` must be a Gitlab **Issue**, not an MR. The phase turns a completed issue into a draft merge request.
 - Use `$WORKSPACE_ROOT/claude_workflow/.claude/skills/wf/phases/create_mr.md` as the main instruction.
 - MR title and description follow the template at `$WORKSPACE_ROOT/claude_workflow/template/gitlab_mr.md` (draft flag and labels come from its "Others" section).
-- The composed body is filled from the design document and `git diff`; testing-checklist boxes are left as the template provides them (no invented test evidence).
+- The composed body is filled from the design documents and `git diff`; testing-checklist boxes are left as the template provides them (no invented test evidence).
 - **Confirmation required**: creating an MR is outward-facing — show the title, target branch, draft flag, and labels, and ask before creating.
 - **Input**: the code changes from Coding (committed and pushed on the working branch).
 - **Output**: created draft MR; composed body stored at `<prefix>mr.md`.

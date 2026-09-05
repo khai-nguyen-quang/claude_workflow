@@ -165,8 +165,8 @@ Options:
 
 Gates (run by this script, never by the model):
   research -> _brainstorm.md exists and was written by this run.
-  design  -> _brainstorm.md and _design.md exist and were written by this run,
-             and _plan_review.md ends in DESIGN OK.
+  design  -> _brainstorm.md, _design_overview.md and _design_detailed.md exist
+             and were written by this run, and _plan_review.md ends in DESIGN OK.
   code    -> ./dev.sh build compiles, and _review.md is fresh and carries the
              verdict PRODUCTION READY.
   verify  -> ./dev.sh test, plus a check that tests actually EXECUTED. A summary
@@ -700,7 +700,8 @@ NON-INTERACTIVE RUN: nobody can answer questions. Work through the brainstorming
 step by making the decisions yourself and RECORDING them -- every assumption you
 had to make goes into the spec under "Assumptions", not into a question back to
 the user. Do not stop for approval at any gate. Produce the brainstorm spec and
-the design document, then update _state.md.
+BOTH design documents (_design_overview.md and _design_detailed.md), then update
+_state.md.
 EOF
 }
 
@@ -713,9 +714,11 @@ In addition to the phase's normal work, WRITE the review to
 That file must END with a line that is exactly one of:
   DESIGN OK
   CONFLICTS FOUND
-Use CONFLICTS FOUND if the brainstorm spec and the design document disagree, if
-the design contradicts the issue's acceptance criteria, or if the design leaves
-a decision that coding cannot make on its own. Above that verdict line, list
+Use CONFLICTS FOUND if the brainstorm spec and the design documents disagree, if
+the two design documents disagree with each other (a component in the overview's
+map with no detailed section, or the reverse), if the design contradicts the
+issue's acceptance criteria, or if the design leaves a decision that coding
+cannot make on its own. Above that verdict line, list
 every conflict as a numbered item naming the document, the section, what
 conflicts, and the fix. Use DESIGN OK only when there is nothing left to fix.
 EOF
@@ -745,12 +748,19 @@ _gate_plan_review() {
 }
 
 _stage_design() {
-  local design="${TMP_DIR}/${slug}_design.md" round=0
+  local overview="${TMP_DIR}/${slug}_design_overview.md"
+  local detailed="${TMP_DIR}/${slug}_design_detailed.md" round=0
 
   _step "Planning ${ref}"
   _claude_phase planning "planning" "$(_planning_directive)" || return 1
-  if [[ "${dry_run}" != true && ! -f "${design}" ]]; then
-    _fail "planning produced no design document at ${design}"; return 1
+  # The design is a pair; half a design is not a design.
+  if [[ "${dry_run}" != true ]]; then
+    local missing=()
+    [[ -f "${overview}" ]] || missing+=("${overview}")
+    [[ -f "${detailed}" ]] || missing+=("${detailed}")
+    if [[ ${#missing[@]} -gt 0 ]]; then
+      _fail "planning produced an incomplete design; missing: ${missing[*]}"; return 1
+    fi
   fi
 
   while :; do
@@ -776,8 +786,9 @@ _stage_design() {
 $(_planning_directive)
 
 The design has already been written and then reviewed. The review found the
-conflicts below. Do NOT re-plan from scratch: update ${slug}_brainstorm.md and
-${slug}_design.md so every finding is resolved, and leave the rest alone.
+conflicts below. Do NOT re-plan from scratch: update ${slug}_brainstorm.md,
+${slug}_design_overview.md and ${slug}_design_detailed.md so every finding is
+resolved, and leave the rest alone.
 
 $(cat "${TMP_DIR}/${slug}_plan_review.md")
 EOF
@@ -834,10 +845,10 @@ _gate_build_optional() {
 }
 
 _stage_code() {
-  local design="${TMP_DIR}/${slug}_design.md" round=0
+  local detailed="${TMP_DIR}/${slug}_design_detailed.md" round=0
 
-  if [[ "${dry_run}" != true && ! -f "${design}" ]]; then
-    _fail "no design document at ${design}."
+  if [[ "${dry_run}" != true && ! -f "${detailed}" ]]; then
+    _fail "no detailed design at ${detailed}."
     echo "  Coding implements a design. Run --design first, or write and approve" >&2
     echo "  the design by hand." >&2
     return 1
@@ -908,7 +919,8 @@ In addition to the phase's normal work, WRITE the record to
 Its FIRST line must be exactly:
   Document: <path of the document you generated, relative to REPO_ROOT>
 Below that, summarise what the document covers and which artifacts it was
-written from (${slug}_brainstorm.md and/or ${slug}_design.md).
+written from (${slug}_brainstorm.md and/or ${slug}_design_overview.md plus
+${slug}_design_detailed.md).
 EOF
 }
 
@@ -943,12 +955,15 @@ _gate_doc() {
 }
 
 _stage_doc() {
-  local spec="${TMP_DIR}/${slug}_brainstorm.md" design="${TMP_DIR}/${slug}_design.md"
+  local spec="${TMP_DIR}/${slug}_brainstorm.md"
+  local overview="${TMP_DIR}/${slug}_design_overview.md"
+  local detailed="${TMP_DIR}/${slug}_design_detailed.md"
 
-  if [[ "${dry_run}" != true && ! -f "${spec}" && ! -f "${design}" ]]; then
+  if [[ "${dry_run}" != true && ! -f "${spec}" && ! -f "${overview}" && ! -f "${detailed}" ]]; then
     _fail "nothing to write up for ${ref}."
     echo "  --doc documents what --research or --design produced, and neither" >&2
-    echo "  ${slug}_brainstorm.md nor ${slug}_design.md exists. Run one first." >&2
+    echo "  ${slug}_brainstorm.md nor ${slug}_design_{overview,detailed}.md exists." >&2
+    echo "  Run one first." >&2
     return 1
   fi
 

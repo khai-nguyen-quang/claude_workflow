@@ -15,7 +15,7 @@ description: >
 Usage: /wf-epic <phase> <epic-ref>
 
   research        Phase 1 — 3 lenses + consolidator          -> _strategy.md
-  design          Phase 2 — draft/review/fix loop, <=3 rounds -> _design.md
+  design          Phase 2 — draft/review/fix loop, <=3 rounds -> _design_{overview,detailed}.md
   split           Phase 3 — reconcile existing + new tickets  (human confirms)
   implementation  Phase 4 — AGENT TEAM, streams every ticket  -> MRs
   status          Show the implementation queue

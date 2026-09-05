@@ -47,8 +47,10 @@ Three teammates from subagent definitions. **Name them exactly** `coder`, `revie
 
 Scale by adding coders — it is the bottleneck, and nothing else in the graph changes.
 
-Every spawn prompt carries: `REPO_ROOT` for its ticket, the design document, the `## Interfaces`
-section, and `<technical_note>` / `<setup_commands>` for the project.
+Every spawn prompt carries: `REPO_ROOT` for its ticket, **both** design documents
+(`epic-<id>_design_overview.md` for where the ticket sits in the system,
+`epic-<id>_design_detailed.md` for what to build), the `## Interfaces` section, and
+`<technical_note>` / `<setup_commands>` for the project.
 
 ### The persistent reviewer is why this is a team
 
@@ -109,7 +111,7 @@ Rounds are created **dynamically** — no driver is in the loop. The graph decid
 1. **Converged** — `PRODUCTION READY`.
 2. **Diverging** — round N has as many blocking+major findings as round N−1.
 3. **Capped** — 2 rounds. A ticket needing a third usually has a *design* problem; raise it as a
-   finding against `_design.md` rather than grinding it down in review.
+   finding against the design documents rather than grinding it down in review.
 
 `done` and `blocked` are both terminal and **both release WIP backpressure**. That is the point of
 `blocked`: the WIP edge (`code:T(n+2)` waits on `T(n)`) combined with an unbounded loop would

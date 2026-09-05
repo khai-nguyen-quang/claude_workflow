@@ -2,7 +2,7 @@
 
 ## Goal
 
-Produce a detailed design document for a GitLab issue **or a free-form feature request**, building on the approved brainstorm spec. The brainstorm spec (high-level approach) and the design document are the inputs the Coding phase accepts — both must be approved by the user before work proceeds.
+Produce the design documents for a GitLab issue **or a free-form feature request**, building on the approved brainstorm spec. The design is a **pair** of documents — `_design_overview.md` (how the system fits together) and `_design_detailed.md` (what exactly to build) — whose structure is defined by `$WORKSPACE_ROOT/claude_workflow/template/design_document.md`. The brainstorm spec (high-level approach) and both design documents are the inputs the Coding phase accepts; all must be approved by the user before work proceeds.
 
 This single workflow serves both input variants; every step is identical except the sub-steps marked **(GitLab issue only)**. The variant is fixed by the phase as `<plan_source>` = `gitlab-issue` (`<ref>` has `#`) or `user-prompt` (free-form).
 
@@ -100,45 +100,48 @@ Read all found documents. Note any build-system conventions, concurrency rules, 
 
 ---
 
-### Step 3 — Write design document
+### Step 3 — Write the design documents
 
 The brainstorm spec (`_brainstorm.md`) is the approved high-level approach and replaces the
 former strategy document. Do not rewrite it — build the design directly on top of it.
 
-Write `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design.md` covering each of the following sections:
+**Read `$WORKSPACE_ROOT/claude_workflow/template/design_document.md` first and follow it exactly.**
+It is the normative structure; the notes below only say what this phase adds on top of it.
 
-**Components and modules**
-- List every component or module to implement, with its responsibility in one sentence.
+The design is **two files**, never one:
 
-**Diagrams**
-- Draw the design using Mermaid, following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`.
-- Include at minimum an architectural diagram and a sequence diagram for the main flow; add a block diagram when the component breakdown needs it.
-- Embed the diagrams inline in this design document as ```` ```mermaid ```` fenced blocks.
+| File | Contents |
+|------|----------|
+| `.tmp/<plan_slug>/<plan_slug>_design_overview.md` | purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions |
+| `.tmp/<plan_slug>/<plan_slug>_design_detailed.md` | one section per component, `## Interfaces`, build integration, test strategy, end-to-end walkthrough |
 
-**Communication flow**
-- Describe how components interact at a high level (IPC, function calls, shared state, message queues, etc.).
+Writing only one of them is an incomplete phase. A design that reads as a flat list of isolated
+components is the failure this structure exists to prevent — see the template's three rules.
 
-**Behaviors and responsibilities**
-- For each component: what it owns, what it produces, what it consumes, and what invariants it must maintain.
+What this phase requires beyond the template:
 
-**Build system integration**
-- How new files are included in the build. Specify whether changes apply to Docker build only or both Docker and cross-build (rk3588).
-- List any new `SConscript` entries, CMakeLists changes, or script modifications needed.
+**Diagrams** — draw with Mermaid following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`,
+embedded inline as ```` ```mermaid ```` fenced blocks. At minimum an architectural diagram and a
+sequence diagram for the main flow, both in the overview, **before** any detailed section exists.
+Add a block diagram when the component breakdown needs it.
 
-**Detailed design**
-- Class and function signatures for all new or changed code
-- Data structures and their fields
-- Algorithms with enough detail to implement without ambiguity
+**Component sections** — every component gets all six headings from the template (Receives /
+Produces / Assumes about the rest of the system / Types and signatures / Error conditions / Edge
+cases and failure modes), and opens with its upstream and downstream components named. Be precise
+about types, error conditions, edge cases and failure modes: a component section that a coder has
+to guess at has failed its only job.
 
-**Error handling strategy**
-- How errors are surfaced, logged, and recovered from in each component.
+**Build system integration** — how new files enter the build. Specify whether changes apply to the
+Docker build only or to both Docker and the cross-build (rk3588). List any new `SConscript`
+entries, CMakeLists changes, or script modifications needed.
 
-**Manual test strategy**
-- Step-by-step instructions to verify the feature works end-to-end by hand.
+**Test strategy** — automated (unit tests: what to test, which framework and naming convention,
+which edge cases from the component sections; integration tests: which boundaries and what
+environment) and manual (step-by-step verification by hand).
 
-**Automated test strategy**
-- Unit tests: what to test, which framework and naming convention to use, which edge cases to cover.
-- Integration tests: what interaction boundaries to exercise and what environment is required.
+**End-to-end walkthrough** — close the detailed document by tracing the 1–3 most important user
+actions through every component in order, naming each component's section number, and include at
+least one failure branch.
 
 Write the state file:
 
@@ -155,7 +158,8 @@ Write the state file:
 - [x] Request captured (issue fetched / prompt described)
 - [x] Relevant docs read
 - [x] Brainstorm spec approved
-- [x] Design written
+- [x] Design overview written
+- [x] Detailed design written
 - [ ] Design approved
 
 ## Next step
@@ -168,9 +172,10 @@ Present design to user for approval.
 **This is the agent's terminal step.** Approval is an interactive, human-in-the-loop step that
 happens in the **main session**, not inside this agent — you have no channel to the user and
 cannot wait for a reply. Do **not** wait for approval and do **not** update the state to
-"approved" yourself. Once the design document and the state file (`Phase`: *awaiting approval*)
-are written, **stop and return** a short summary to the caller: the path to `_design.md`, the
-sections covered, and any open questions for the user. The main session owns approval and the
+"approved" yourself. Once both design documents and the state file (`Phase`: *awaiting approval*)
+are written, **stop and return** a short summary to the caller: the paths to
+`_design_overview.md` and `_design_detailed.md`, the components covered, and any open questions
+for the user. The main session owns approval and the
 final state update.
 
 ---
@@ -178,5 +183,6 @@ final state update.
 ## Output files
 
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_brainstorm.md` — approved high-level approach (from the brainstorming step; replaces the old strategy doc)
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design.md` — detailed design for coding
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design_overview.md` — architecture, diagrams, component map, key decisions
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design_detailed.md` — per-component detail, `## Interfaces`, build, tests, end-to-end walkthrough
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_state.md` — phase state (update after every approved step)

@@ -50,7 +50,7 @@ If the file does not exist, fall back to `$REPO_ROOT/CLAUDE.md` or `README.md`.
 
 ### Step 2 — Load language skill
 
-Detect the language from context (file extension, existing code, or design document), then read and apply the matching skill:
+Detect the language from context (file extension, existing code, or the detailed design), then read and apply the matching skill:
 
 - **C++ / `.cc` / `.h`** → load `$WORKSPACE_ROOT/claude_workflow/skills/cpp/SKILL.md`
 - **Python / `.py`** → load `$WORKSPACE_ROOT/claude_workflow/skills/python/SKILL.md`

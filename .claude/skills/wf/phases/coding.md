@@ -11,7 +11,8 @@ Spawn an Agent with:
   ## Task
   GitLab ref: <ref>
   WORKSPACE_ROOT: $WORKSPACE_ROOT
-  Design document: $WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design.md
+  Design overview: $WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design_overview.md
+  Detailed design: $WORKSPACE_ROOT/claude_workflow/.tmp/<project>-<id>/<project>-<id>_design_detailed.md
 
   <if state_context exists>
   ## Current state

@@ -5,13 +5,12 @@ Spec: `template/epic_workflow.md` §4. Announce: **"Entering Epic Design phase."
 **Mechanism: subagent fan-out, in a loop of at most 3 rounds.**
 
 ```
-                    ┌──────────────────────────────────────────┐
-                    ▼                                          │
-_strategy.md ─▶ author ─▶ draft ─▶ 3 reviewers ─▶ consolidate ─┤ findings
-                (WARM)             (FRESH)          │          │
-                                                DESIGN OK      │
-                                                    ▼          │
-                                              write_design ────┘
+                ┌─────────────────────────────────────────────────┐
+                ▼                                                 │
+_strategy.md ─▶ author ─▶ 2 drafts ─▶ 3 reviewers ─▶ consolidate ─┤ findings
+                                                     DESIGN OK    │
+                                                         ▼        │
+                                                   write_design ──┘
 ```
 
 ## The freshness asymmetry — get this right or the loop is pointless
@@ -32,15 +31,35 @@ _strategy.md ─▶ author ─▶ draft ─▶ 3 reviewers ─▶ consolidate �
 ## Round N
 
 **a. Author.** Round 1: draft from `_strategy.md`. Round N>1: revise from
-`_design_review_r<N-1>.md`. Writes `epic-<id>_design_draft.md` (overwritten each round).
+`_design_review_r<N-1>.md`. Writes **two** files, both overwritten each round:
+
+| Draft | Contents |
+|-------|----------|
+| `epic-<id>_design_overview_draft.md` | purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions |
+| `epic-<id>_design_detailed_draft.md` | one section per component, `## Interfaces`, build integration, test strategy, end-to-end walkthrough |
+
+The structure of both is **normative** and lives in
+`$WORKSPACE_ROOT/claude_workflow/template/design_document.md` — put it in the author's prompt every
+round. A design that reads as a flat list of isolated components is exactly what that template
+exists to prevent.
+
+**The split is drafted, not assembled later.** Deciding what belongs in the overview versus the
+detail is a judgement call, and judgement calls happen in a round where reviewers see them —
+never in `write_design`, which nothing reviews.
 
 **b. Three reviewers, in one message, silent until their file is written.**
 
+Every reviewer reads **both drafts** and judges them as one design.
+
 | Lens | Reviews | Writes |
 |------|---------|--------|
-| usecases | all necessary user cases covered; **is `## Interfaces` complete enough to code against** | `_design_review_r<N>_usecases.md` |
+| usecases | all necessary user cases covered; **is `## Interfaces` complete enough to code against**; does the end-to-end walkthrough actually trace through the component sections | `_design_review_r<N>_usecases.md` |
 | scale | is it easy to scale up in future | `_design_review_r<N>_scale.md` |
-| corners | which corner cases are missing | `_design_review_r<N>_corners.md` |
+| corners | which corner cases are missing; are error conditions, edge cases and failure modes precise per component | `_design_review_r<N>_corners.md` |
+
+One finding class belongs to no single lens, so **every** reviewer checks it: a component section
+that never names its upstream and downstream components, or an assumption no named component
+delivers. That is the isolation failure the two-file structure exists to catch.
 
 Every prompt must include `_design_decisions.md` (if it exists) as:
 *"These findings were already considered — do not re-raise without new evidence."*
@@ -78,21 +97,28 @@ Report the convergence trend (`12 → 3 → 0`) to the user at the end.
 
 ## write_design
 
-Author turns the converged draft into `epic-<id>_design.md`: house style,
-Mermaid per `template/diagram.md`, and the normative `## Interfaces` section.
+Author turns the two converged drafts into the two final documents, one to one:
+
+- `epic-<id>_design_overview_draft.md` → `epic-<id>_design_overview.md`
+- `epic-<id>_design_detailed_draft.md` → `epic-<id>_design_detailed.md`
+
+House style, Mermaid per `template/diagram.md`, and the normative `## Interfaces` section in the
+detailed document.
 
 **Assembly only — no design decisions.** Nothing reviews this step, so anything requiring judgement
-belongs in a round instead.
+belongs in a round instead. Moving material between the two documents is a judgement call: if the
+split is wrong, that is a finding for the next round, not a fix here.
 
 ## `## Interfaces` is mandatory
 
-Signatures, message types, file paths, error cases — precise enough to be a contract between agents
-who cannot see each other's work. **Phase 4's coder and its tests are written against this
-section in parallel.** Without it phase 4 silently degrades into a sequential pipeline.
+Lives in `epic-<id>_design_detailed.md`. Signatures, message types, file paths, error cases —
+precise enough to be a contract between agents who cannot see each other's work. **Phase 4's coder
+and its tests are written against this section in parallel.** Without it phase 4 silently degrades
+into a sequential pipeline.
 
 ## Gate
 
-`epic-<id>_design.md` exists, contains `## Interfaces`, and the last consolidated review says
-`DESIGN OK`.
+`epic-<id>_design_overview.md` and `epic-<id>_design_detailed.md` both exist, the detailed
+document contains `## Interfaces`, and the last consolidated review says `DESIGN OK`.
 
 Update `_state.md`. Next: `/wf-epic split Epic#<id>`.

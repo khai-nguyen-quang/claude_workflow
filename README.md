@@ -15,7 +15,7 @@ phase resumes cleanly — including after a context compaction.
 
 ```
 /wf <phase> <ref>
-  planning      Phase 1 — strategy + design document        [wf-planner]
+  planning      Phase 1 — brainstorm + design overview/detail [wf-planner]
   plan-review   Phase 2 — review design docs for conflicts
   coding        Phase 3 — implement the approved design     [wf-coder]
   test          Phase 4 — write unit and integration tests
@@ -27,7 +27,7 @@ phase resumes cleanly — including after a context compaction.
 
 /wf-epic <phase> <epic-ref>
   research        Phase 1 — 3 research lenses + a consolidator   -> _strategy.md
-  design          Phase 2 — draft/review/fix loop, max 3 rounds  -> _design.md
+  design          Phase 2 — draft/review/fix loop, max 3 rounds  -> _design_{overview,detailed}.md
   split           Phase 3 — reconcile existing + new tickets     (you confirm)
   implementation  Phase 4 — agent team, streams every ticket     -> MRs / PRs
   status          Show the implementation queue

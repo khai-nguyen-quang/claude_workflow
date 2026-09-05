@@ -5,7 +5,7 @@ merged code in four phases.
 
 ```
 /wf-epic research       Epic#60    3 lenses + consolidator        -> _strategy.md
-/wf-epic design         Epic#60    draft/review/fix loop, <=3     -> _design.md
+/wf-epic design         Epic#60    draft/review/fix loop, <=3     -> _design_{overview,detailed}.md
 /wf-epic split          Epic#60    reconcile existing + new (you confirm)
 /wf-epic implementation Epic#60    AGENT TEAM, streams tickets    -> MRs
 /wf-epic status         Epic#60    the queue

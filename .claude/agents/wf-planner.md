@@ -2,7 +2,7 @@
 name: wf-planner
 description: >
   Planning agent for project workflow. Given a GitLab issue,
-  produces a strategy and design document covering architecture, component design,
+  produces a design overview and a detailed design covering architecture, component design,
   build integration, and test strategy.
 model: claude-opus-4-8
 tools: Read, Write, Bash, Glob, Grep

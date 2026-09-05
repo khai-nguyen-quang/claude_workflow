@@ -35,8 +35,11 @@ If the epic has no children, skip to Step 4 — everything is `create`.
 
 ## Step 2 — Coverage matrix
 
-From `epic-<id>_design.md`, list the units of work: every component in the design and every entry
-in its `## Interfaces` section. Map each against the existing tickets:
+From `epic-<id>_design_detailed.md`, list the units of work: every component section and every
+entry in its `## Interfaces` section. Use `epic-<id>_design_overview.md`'s component map to check
+you have them all and to get the dataflow order — a ticket that splits a component away from the
+one feeding it is a bad split, and the map's *Receives from / Produces for* columns are how you
+see that. Map each against the existing tickets:
 
 | Design work | Covered by | Verdict |
 |---|---|---|

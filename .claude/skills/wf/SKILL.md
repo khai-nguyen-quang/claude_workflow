@@ -17,7 +17,7 @@ If args are empty, print this usage and stop:
 Usage: /wf <phase> <ref>
 
 Phases:
-  planning      Phase 1 — strategy + design document        [wf-planner agent]
+  planning      Phase 1 — brainstorm + design overview/detail [wf-planner agent]
   plan-review   Phase 2 — review design docs for conflicts
   coding        Phase 3 — implement the approved design     [wf-coder agent]
   test          Phase 4 — write unit and integration tests
