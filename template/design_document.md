@@ -15,18 +15,22 @@ document is a reference, entered at whichever component you are implementing.
 
 ---
 
-## The three rules that make a design readable
+## The four rules that make a design readable
 
 These are the failure modes this template exists to prevent. They apply to both files.
 
-**1. Overview before detail — always.** The reader must be able to picture the whole system before
+**1. Scenarios before structure.** The overview opens with the scenario diagram — who acts, what
+they do, what they get back, failure scenarios included. Architecture presented before the
+scenarios it serves cannot be judged, only believed.
+
+**2. Overview before detail — always.** The reader must be able to picture the whole system before
 meeting any component. A document that opens with a component is unreadable, because nothing tells
 the reader where that component sits.
 
-**2. Diagram before prose.** Every level of the document draws before it explains. A component
+**3. Diagram before prose.** Every level of the document draws before it explains. A component
 section without its place in a diagram is an orphan.
 
-**3. No component is described in isolation.** Every component section names what feeds it and what
+**4. No component is described in isolation.** Every component section names what feeds it and what
 it feeds, *by component name*, with a one-line reason. If a section can be read without ever
 mentioning another component, either it is a standalone tool or the section is wrong.
 
@@ -37,7 +41,20 @@ mentioning another component, either it is a standalone tool or the section is w
 Target: **2–5 pages**. No function signatures, no struct fields, no error codes — those belong in
 file 2. If a paragraph here cannot be understood without a type definition, it is in the wrong file.
 
-### 1. Purpose and scope
+### 1. Scenarios
+
+The **scenario diagram**, per `template/diagram.md` §1 — before any prose about the solution.
+Actors on the left, one node per scenario carrying an `S<n>` id, the observable outcome on the
+right, failure scenarios included. Under it, one line per scenario saying what "works" means for
+it.
+
+No component names appear in this section. A scenario that cannot be stated without naming a
+module is a description of the implementation, not of what the user needs.
+
+The `S<n>` ids are referenced by the test strategy and the end-to-end walkthrough in file 2. A
+scenario neither of them ever names is either out of scope or unbuilt — both worth catching here.
+
+### 2. Purpose and scope
 
 What problem this solves, in a few sentences. Then two explicit lists:
 
@@ -45,7 +62,7 @@ What problem this solves, in a few sentences. Then two explicit lists:
 - **Out of scope** — what it deliberately does not, and where that work lives instead (a later
   epic, an existing system, a decision deferred). An unstated exclusion is read as an omission.
 
-### 2. Architecture at a glance
+### 3. Architecture at a glance
 
 One paragraph naming the major pieces and the single sentence that explains the shape of the
 system — the organising idea a reader needs before any diagram makes sense ("a capture stage fans
@@ -55,7 +72,7 @@ event bus").
 Then the **architecture / component diagram**, per `template/diagram.md`. Label every edge with
 what crosses it (data, call, event), not just an arrow.
 
-### 3. Primary flow
+### 4. Primary flow
 
 The **sequence diagram** for the system's main flow, followed by one short paragraph naming the
 steps in words. This is the caption, not the walkthrough — the full end-to-end trace lives at the
@@ -64,7 +81,7 @@ end of file 2, where the component detail it refers to already exists.
 Add a second sequence diagram only for a flow that is genuinely different in shape (an error or
 recovery path, a second actor). Do not draw a variant that differs by one step.
 
-### 4. Component map
+### 5. Component map
 
 Every component in one table — the index into file 2. One row per component, one sentence each.
 
@@ -76,13 +93,13 @@ Every component in one table — the index into file 2. One row per component, o
 The **Receives from / Produces for** columns are what turn a list of parts into a system. Order the
 rows in dataflow order — file 2 uses the same order, and the numbers are the cross-reference.
 
-### 5. Key decisions
+### 6. Key decisions
 
 Each decision that shapes the design: what was chosen, what was rejected, and the one reason.
 Three lines each, not an essay. A reader who disagrees with the design usually disagrees with one
 of these, and this is where they find it.
 
-### 6. Assumptions and open risks
+### 7. Assumptions and open risks
 
 What this design takes as true about the rest of the system, the hardware, or the workload, and
 what breaks if an assumption is false. Mark anything unverified explicitly — an unverified number
@@ -169,14 +186,17 @@ and whether the change applies to the container build only or to the cross-build
   above), and integration tests naming the boundaries they exercise.
 - **Manual** — the steps a human runs to confirm the feature works end to end.
 
+Name the scenario ids (`S<n>`, from the overview's §1) each test or manual step covers. Every
+scenario in the diagram must appear against at least one of them.
+
 ### End-to-end walkthrough
 
-**The section that makes the whole document click.** For each of the 1–3 most important user
-actions, trace the request through every component *in order*, naming the section number of each
-component as you pass through it:
+**The section that makes the whole document click.** For each of the 1–3 most important scenarios
+from the overview's §1 — naming its `S<n>` id — trace the request through every component *in
+order*, naming the section number of each component as you pass through it:
 
 ```markdown
-#### Walkthrough: driver triggers a manual recording
+#### Walkthrough: S1 — driver triggers a manual recording
 
 1. **`api` (§7)** receives `POST /record` ... produces a `RecordRequest{...}` on ...
 2. **`record` (§4)** is triggered by ... reads from the pool filled by `capture` (§1) ...
@@ -193,6 +213,8 @@ section, not the walkthrough.
 
 ## Checklist before the design is done
 
+- [ ] Overview opens with the scenario diagram: every scenario has an id, an actor and an
+      observable outcome, and at least one failure scenario is present.
 - [ ] Overview reads start to finish without opening the detailed file.
 - [ ] Architecture diagram and primary-flow sequence diagram both present, edges labelled.
 - [ ] Component map ordered by dataflow; its numbering matches the detailed sections.
@@ -200,4 +222,5 @@ section, not the walkthrough.
 - [ ] Every assumption names the component that satisfies it, and that component delivers it.
 - [ ] Every error condition names a concrete reporting mechanism.
 - [ ] `## Interfaces` complete enough to code and test against in parallel.
+- [ ] Every scenario id is named by a test or manual step, and the walkthroughs name theirs.
 - [ ] At least one end-to-end walkthrough, with a failure branch.

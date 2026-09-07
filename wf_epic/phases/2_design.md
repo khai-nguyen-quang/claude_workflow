@@ -35,7 +35,7 @@ _strategy.md ─▶ author ─▶ 2 drafts ─▶ 3 reviewers ─▶ consolidate
 
 | Draft | Contents |
 |-------|----------|
-| `epic-<id>_design_overview_draft.md` | purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions |
+| `epic-<id>_design_overview_draft.md` | scenarios (the diagram comes first), purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions |
 | `epic-<id>_design_detailed_draft.md` | one section per component, `## Interfaces`, build integration, test strategy, end-to-end walkthrough |
 
 The structure of both is **normative** and lives in
@@ -53,7 +53,7 @@ Every reviewer reads **both drafts** and judges them as one design.
 
 | Lens | Reviews | Writes |
 |------|---------|--------|
-| usecases | all necessary user cases covered; **is `## Interfaces` complete enough to code against**; does the end-to-end walkthrough actually trace through the component sections | `_design_review_r<N>_usecases.md` |
+| usecases | **does the overview open with a scenario diagram, and does it cover every necessary user case, failures included**; **is `## Interfaces` complete enough to code against**; does the end-to-end walkthrough actually trace through the component sections | `_design_review_r<N>_usecases.md` |
 | scale | is it easy to scale up in future | `_design_review_r<N>_scale.md` |
 | corners | which corner cases are missing; are error conditions, edge cases and failure modes precise per component | `_design_review_r<N>_corners.md` |
 

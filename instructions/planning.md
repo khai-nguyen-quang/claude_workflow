@@ -112,18 +112,26 @@ The design is **two files**, never one:
 
 | File | Contents |
 |------|----------|
-| `.tmp/<plan_slug>/<plan_slug>_design_overview.md` | purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions |
+| `.tmp/<plan_slug>/<plan_slug>_design_overview.md` | scenarios (first), purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions |
 | `.tmp/<plan_slug>/<plan_slug>_design_detailed.md` | one section per component, `## Interfaces`, build integration, test strategy, end-to-end walkthrough |
 
 Writing only one of them is an incomplete phase. A design that reads as a flat list of isolated
-components is the failure this structure exists to prevent — see the template's three rules.
+components is the failure this structure exists to prevent — see the template's four rules.
 
 What this phase requires beyond the template:
 
 **Diagrams** — draw with Mermaid following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`,
-embedded inline as ```` ```mermaid ```` fenced blocks. At minimum an architectural diagram and a
-sequence diagram for the main flow, both in the overview, **before** any detailed section exists.
-Add a block diagram when the component breakdown needs it.
+embedded inline as ```` ```mermaid ```` fenced blocks.
+
+The overview **must start with the scenario diagram** (`diagram.md` §1) — it is section 1, ahead of
+purpose and scope: actors, one node per scenario carrying an `S<n>` id, the observable outcome,
+failure scenarios included, and no component names. Writing the architecture before the scenarios
+is a design nobody can judge, so this ordering is not a style preference.
+
+Only after it come the architectural diagram and the sequence diagram for the main flow, both in
+the overview and **before** any detailed section exists. Add a block diagram when the component
+breakdown needs it. The scenario ids are referenced again by the test strategy and the end-to-end
+walkthrough in the detailed document.
 
 **Component sections** — every component gets all six headings from the template (Receives /
 Produces / Assumes about the rest of the system / Types and signatures / Error conditions / Edge
@@ -183,6 +191,6 @@ final state update.
 ## Output files
 
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_brainstorm.md` — approved high-level approach (from the brainstorming step; replaces the old strategy doc)
-- `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design_overview.md` — architecture, diagrams, component map, key decisions
+- `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design_overview.md` — scenarios, architecture, diagrams, component map, key decisions
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_design_detailed.md` — per-component detail, `## Interfaces`, build, tests, end-to-end walkthrough
 - `$WORKSPACE_ROOT/claude_workflow/.tmp/<plan_slug>/<plan_slug>_state.md` — phase state (update after every approved step)

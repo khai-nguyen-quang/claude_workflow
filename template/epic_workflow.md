@@ -140,8 +140,8 @@ nothing for a loop to converge.
 Turns the strategy into the design that phase 3 can split and phase 4 can implement.
 
 **The design is two documents, not one.** `_design_overview.md` answers *how does this fit
-together* — architecture, diagrams, the component map, the decisions — and is readable in one
-sitting. `_design_detailed.md` answers *what exactly do I build* — one section per component, the
+together* — it opens with the scenario diagram (what the system must do, failures included), then
+architecture, diagrams, the component map, the decisions — and is readable in one sitting. `_design_detailed.md` answers *what exactly do I build* — one section per component, the
 normative `## Interfaces`, build, tests, and the end-to-end walkthrough. `template/design_document.md`
 is the normative structure for both. One document cannot serve both readers: the architecture
 drowns in signatures and the components read as an isolated list, which is the exact failure this

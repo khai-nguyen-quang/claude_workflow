@@ -177,10 +177,11 @@ If the user provides a project/issue in their message, use that instead of scann
 - Planning starts with a **brainstorming step**: it delegates to the `superpowers:brainstorming` skill to turn the ticket into an approved design spec (`*_brainstorm.md`), then hands that spec to the wf-planner. Brainstorming stops after the spec is approved — it does **not** run into `writing-plans`; the wf-planner does the planning.
 - Planning phase includes brainstorming the high-level approach (the brainstorm spec replaces the old strategy document) and writing the design
 - **The design is two documents, not one**, structured by `$WORKSPACE_ROOT/claude_workflow/template/design_document.md`:
-  - `*_design_overview.md` — purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions. Readable start to finish in one sitting.
+  - `*_design_overview.md` — scenarios, purpose and scope, architecture at a glance, diagrams, primary flow, component map, key decisions, assumptions. Readable start to finish in one sitting.
   - `*_design_detailed.md` — one section per component (what it receives, what it produces, what it assumes about the rest of the system, types and signatures, error conditions, edge cases and failure modes), then `## Interfaces`, build integration, test strategy, and an end-to-end walkthrough of the main user actions.
   - Every component section names its upstream and downstream components. A component described in isolation is the failure this structure exists to prevent.
-- The design overview embeds Mermaid diagrams (block / architectural / sequence) following `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`, **before** any detailed section.
+- The design overview **must start with a scenario diagram** — actors, one node per scenario with an `S<n>` id, the observable outcome, failure scenarios included, no component names — before purpose and scope and before any other diagram. Architecture that arrives before the scenarios it serves cannot be reviewed.
+- The remaining Mermaid diagrams (block / architectural / sequence) follow it in the overview, per `$WORKSPACE_ROOT/claude_workflow/template/diagram.md`, **before** any detailed section.
 - **How**: Uses `$WORKSPACE_ROOT/claude_workflow/instructions/planning.md` as the main instruction going through all steps of planning phase.
 - **Resume from previous step**: Read `_state.md` first. If absent, look for existing `_brainstorm.md`, `_design_overview.md` and `_design_detailed.md` to determine which step to resume.
 - **Input**: Gitlab Issue number or Gitlab Merge Request
